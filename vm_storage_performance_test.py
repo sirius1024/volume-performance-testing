@@ -102,6 +102,7 @@ class TestResult:
     test_name: str
     test_type: str
     parameters: Dict[str, Any]
+    command: str = ""  # 执行的具体命令
     throughput_mbps: float = 0.0
     iops: float = 0.0
     latency_avg_ms: float = 0.0
@@ -114,7 +115,6 @@ class TestResult:
     timestamp: str = ""
     duration: float = 0.0
     error_message: str = ""
-    performance_analysis: PerformanceAnalysis = None  # 性能瓶颈分析结果
     
     def __post_init__(self):
         if not self.timestamp:
@@ -618,6 +618,7 @@ class VMStoragePerformanceTest:
                 test_name=f"DD顺序写测试_{block_size}",
                 test_type="sequential_write",
                 parameters={"block_size": block_size, "file_size": self.config.test_file_size},
+                command=" ".join(command),
                 throughput_mbps=throughput,
                 duration=duration,
                 **stats
@@ -691,6 +692,7 @@ class VMStoragePerformanceTest:
                 test_name=f"DD顺序读测试_{block_size}",
                 test_type="sequential_read",
                 parameters={"block_size": block_size, "file_size": self.config.test_file_size},
+                command=" ".join(read_command),
                 throughput_mbps=throughput,
                 duration=duration,
                 **stats
@@ -764,6 +766,7 @@ class VMStoragePerformanceTest:
                 test_name=f"FIO顺序{rw_type}测试_{block_size}",
                 test_type=f"sequential_{rw_type}",
                 parameters={"block_size": block_size, "rw_type": rw_type},
+                command=" ".join(fio_command),
                 duration=duration,
                 **metrics,
                 **stats
@@ -955,6 +958,7 @@ class VMStoragePerformanceTest:
                     "write_mode": write_mode,
                     "rw_type": rw_type
                 },
+                command=" ".join(fio_command),
                 duration=duration,
                 **metrics,
                 **stats
@@ -1054,6 +1058,7 @@ class VMStoragePerformanceTest:
                 test_name=f"DD随机写测试_{block_size}",
                 test_type="dd_random_write",
                 parameters={"block_size": block_size, "operations": num_operations},
+                command=f"dd if=/dev/zero of={test_file} bs={block_size} count=1 seek=<random> conv=notrunc (执行{num_operations}次)",
                 throughput_mbps=throughput,
                 iops=iops,
                 latency_avg_ms=avg_latency,
@@ -2498,6 +2503,7 @@ class VMStoragePerformanceTest:
                 "test_name": result.test_name,
                 "test_type": result.test_type,
                 "parameters": result.parameters,
+                "command": getattr(result, 'command', 'N/A'),
                 "duration": result.duration,
                 "throughput_mbps": result.throughput_mbps,
                 "iops": result.iops,
@@ -2509,29 +2515,6 @@ class VMStoragePerformanceTest:
                 "network_bandwidth_mbps": result.network_bandwidth_mbps,
                 "error_message": result.error_message
             }
-            
-            # 添加性能瓶颈分析信息
-            if hasattr(result, 'performance_analysis') and result.performance_analysis:
-                analysis = result.performance_analysis
-                result_dict["performance_analysis"] = {
-                    "overall_performance_score": analysis.overall_performance_score,
-                    "analysis_summary": analysis.analysis_summary,
-                    "top1_bottleneck": {
-                        "factor": analysis.top1_bottleneck.factor,
-                        "impact_score": analysis.top1_bottleneck.impact_score,
-                        "description": analysis.top1_bottleneck.description,
-                        "recommendation": analysis.top1_bottleneck.recommendation
-                    } if analysis.top1_bottleneck else None,
-                    "top3_bottlenecks": [
-                        {
-                            "factor": b.factor,
-                            "impact_score": b.impact_score,
-                            "description": b.description,
-                            "recommendation": b.recommendation
-                        } for b in analysis.top3_bottlenecks
-                    ],
-                    "optimization_suggestions": analysis.optimization_suggestions
-                }
             
             report_data["detailed_results"].append(result_dict)
         
@@ -2848,22 +2831,18 @@ class VMStoragePerformanceTest:
             {best_worst_cards}
         </div>
         
-        <h2>性能瓶颈分析</h2>
-        {bottleneck_analysis}
-        
         <h2>详细测试结果</h2>
         <table>
             <thead>
                 <tr>
                     <th>测试名称</th>
                     <th>测试类型</th>
+                    <th>执行命令</th>
                     <th>吞吐量 (MB/s)</th>
                     <th>IOPS</th>
                     <th>平均延迟 (ms)</th>
                     <th>CPU使用率 (%)</th>
                     <th>内存使用率 (%)</th>
-                    <th>性能分数</th>
-                    <th>主要瓶颈</th>
                     <th>状态</th>
                 </tr>
             </thead>
@@ -2886,9 +2865,6 @@ class VMStoragePerformanceTest:
         # 生成最佳/最差性能卡片
         best_worst_cards = self._generate_best_worst_cards(report_data["performance_summary"])
         
-        # 生成性能瓶颈分析内容
-        bottleneck_analysis = self._generate_bottleneck_analysis_html(report_data.get("bottleneck_analysis", {}))
-        
         # 生成详细结果表格
         detailed_results = self._generate_detailed_results_table(report_data["detailed_results"])
         
@@ -2903,7 +2879,6 @@ class VMStoragePerformanceTest:
             test_file_size=report_data["test_info"]["test_file_size"],
             performance_cards=performance_cards,
             best_worst_cards=best_worst_cards,
-            bottleneck_analysis=bottleneck_analysis,
             detailed_results=detailed_results
         )
     
@@ -3075,38 +3050,22 @@ class VMStoragePerformanceTest:
             status_class = "success" if not result["error_message"] else "error"
             status_text = "成功" if not result["error_message"] else "失败"
             
-            # 获取性能分析信息
-            performance_score = "N/A"
-            main_bottleneck = "N/A"
-            
-            if result.get("performance_analysis"):
-                analysis = result["performance_analysis"]
-                performance_score = f"{analysis['overall_performance_score']:.1f}"
-                if analysis.get('top1_bottleneck'):
-                    main_bottleneck = f"{analysis['top1_bottleneck']['factor']} ({analysis['top1_bottleneck']['impact_score']:.1f})"
-            
-            # 根据性能分数设置样式
-            score_class = "performance-high"
-            if result.get("performance_analysis"):
-                score = result["performance_analysis"]["overall_performance_score"]
-                if score >= 80:
-                    score_class = "performance-high"
-                elif score >= 60:
-                    score_class = "performance-medium"
-                else:
-                    score_class = "performance-low"
+            # 获取执行命令
+            command = result.get("command", "N/A")
+            # 如果命令太长，截取前100个字符
+            if len(command) > 100:
+                command = command[:100] + "..."
             
             rows.append(f"""
                 <tr>
                     <td>{result["test_name"]}</td>
                     <td>{result["test_type"]}</td>
+                    <td style="font-family: monospace; font-size: 12px;">{command}</td>
                     <td>{result["throughput_mbps"] or 0:.2f}</td>
                     <td>{result["iops"] or 0:.0f}</td>
                     <td>{result["latency_avg_ms"] or 0:.2f}</td>
                     <td>{result["cpu_usage_percent"] or 0:.1f}</td>
                     <td>{result["memory_usage_mb"] or 0:.1f}</td>
-                    <td class="{score_class}">{performance_score}</td>
-                    <td>{main_bottleneck}</td>
                     <td class="{status_class}">{status_text}</td>
                 </tr>
             """)
@@ -3128,41 +3087,18 @@ class VMStoragePerformanceTest:
         
         # 写入标题行
         headers = [
-            "测试名称", "测试类型", "持续时间(秒)", "吞吐量(MB/s)", "IOPS", 
+            "测试名称", "测试类型", "执行命令", "持续时间(秒)", "吞吐量(MB/s)", "IOPS", 
             "平均延迟(ms)", "P95延迟(ms)", "P99延迟(ms)", "CPU使用率(%)", 
-            "内存使用率(%)", "网络带宽(MB/s)", "性能分数", "主要瓶颈", 
-            "Top1瓶颈因素", "Top1影响分数", "Top3瓶颈因素", "错误信息"
+            "内存使用率(%)", "网络带宽(MB/s)", "错误信息"
         ]
         writer.writerow(headers)
         
         # 写入数据行
         for result in report_data["detailed_results"]:
-            # 获取性能瓶颈分析信息
-            performance_analysis = result.get("performance_analysis", {})
-            performance_score = performance_analysis.get("overall_performance_score", 0)
-            
-            # 获取Top 1瓶颈
-            top1_bottleneck = ""
-            top1_score = ""
-            if performance_analysis.get("top1_bottleneck"):
-                top1 = performance_analysis["top1_bottleneck"]
-                top1_bottleneck = f"{top1['factor']} ({top1['description']})"
-                top1_score = f"{top1['impact_score']:.2f}"
-            
-            # 获取Top 3瓶颈
-            top3_bottlenecks = ""
-            if performance_analysis.get("top3_bottlenecks") and len(performance_analysis["top3_bottlenecks"]) >= 3:
-                top3_list = []
-                for i, bottleneck in enumerate(performance_analysis["top3_bottlenecks"][:3]):
-                    top3_list.append(f"Top{i+1}: {bottleneck['factor']}({bottleneck['impact_score']:.2f})")
-                top3_bottlenecks = "; ".join(top3_list)
-            
-            # 主要瓶颈描述
-            main_bottleneck = performance_analysis.get("analysis_summary", "未分析")
-            
             row = [
                 result["test_name"],
                 result["test_type"],
+                result.get("command", "N/A"),
                 result["duration"] or 0,
                 result["throughput_mbps"] or 0,
                 result["iops"] or 0,
@@ -3172,11 +3108,6 @@ class VMStoragePerformanceTest:
                 result["cpu_usage_percent"] or 0,
                 result["memory_usage_mb"] or 0,
                 result["network_bandwidth_mbps"] or 0,
-                f"{performance_score:.2f}",
-                main_bottleneck,
-                top1_bottleneck,
-                top1_score,
-                top3_bottlenecks,
                 result["error_message"] or ""
             ]
             writer.writerow(row)
