@@ -1,17 +1,32 @@
 # 虚拟机存储性能测试工具
 
-一个全面的虚拟机存储性能测试工具，用于评估和分析存储系统的各项性能指标。本项目提供两个版本的测试脚本：
+一个全面的虚拟机存储性能测试工具，用于评估和分析存储系统的各项性能指标。
 
-- `enhanced_vm_storage_test.py` - 主测脚本
+## 📁 项目结构
+
+```
+volume-performance-testing/
+├── main.py                    # 主控脚本，支持选择测试类型
+├── dd_test.py                 # DD测试模块
+├── fio_test.py                # FIO测试模块，支持420种配置组合
+├── common.py                  # 共享工具类（Logger、SystemInfoCollector等）
+├── README.md                  # 项目文档
+├── LICENSE                    # 开源许可证
+├── .gitignore                 # Git忽略文件配置
+└── reports/                   # 测试报告目录（运行时自动创建）
+    └── performance_test_report.md  # 测试报告（运行时生成）
+```
 
 ## 🚀 功能特性
 
 ### 核心测试功能
 - **DD顺序读写测试** - 使用dd命令测试顺序读写性能
-- **FIO随机IO测试** - 多种块大小的随机读写性能测试
-- **队列深度测试** - 测试不同队列深度对性能的影响
-- **混合读写比例测试** - 测试不同读写比例下的性能表现
-- **并发测试** - 多任务并发访问性能测试
+- **FIO随机IO测试** - 420种配置组合的全面随机IO性能测试
+  - 6种块大小：4K/8K/32K/64K/1M/4M
+  - 7种队列深度：1/2/4/8/16/32/128
+  - 智能numjobs映射：根据队列深度自动调整并发数
+  - 5种读写比例：100%读/100%写/50%读写/70%读30%写/30%读70%写
+- **自定义测试时间** - 支持快速测试（默认3秒）和生产测试（可配置）
 - **系统信息收集** - 自动收集CPU、内存、存储等系统信息
 - **智能报告生成** - 生成详细的Markdown格式测试报告
 
@@ -41,70 +56,222 @@ brew install fio python3
 
 ## 🏃 快速开始
 
-### 1. 增强版脚本使用（推荐）
+### 1. 基本使用
 
 ```bash
-# 使用默认配置运行所有测试
-python3 enhanced_vm_storage_test.py
+# 运行所有测试（DD + FIO）
+python3 main.py
+
+# 仅运行DD测试
+python3 main.py --dd-only
+
+# 仅运行FIO测试
+python3 main.py --fio-only
+
+# 快速测试模式（部分配置组合）
+python3 main.py --quick
 
 # 指定测试目录
-python3 enhanced_vm_storage_test.py --test-dir /tmp/storage_test
+python3 main.py --test-dir /tmp/storage_test
 
 # 指定输出报告文件名
-python3 enhanced_vm_storage_test.py --output my_performance_report.md
+python3 main.py --output my_performance_report.md
+
+# 自定义测试时间（生产环境推荐60秒或更长）
+python3 main.py --runtime 60
 
 # 测试完成后自动清理测试文件
-python3 enhanced_vm_storage_test.py --cleanup
+python3 main.py --cleanup
 ```
 
-### 2. 原始版本使用（废弃）
+### 2. 独立模块使用
 
 ```bash
-# 使用默认配置运行所有测试
-python3 vm_storage_performance_test.py
+# 单独运行DD测试
+python3 dd_test.py --test-dir /tmp/test --cleanup
 
-# 使用配置文件
-python3 vm_storage_performance_test.py --config config.json
+# 单独运行FIO测试（420种配置）
+python3 fio_test.py --runtime 10 --cleanup
 
-# 快速测试
-python3 vm_storage_performance_test.py --config quick_test_config.json
+# FIO快速测试模式
+python3 fio_test.py --quick --runtime 1 --cleanup
+
+# 查看FIO测试配置信息
+python3 fio_test.py --info
 ```
 
 ### 3. 命令行参数说明
 
-#### enhanced_vm_storage_test.py 参数
+#### main.py 主控脚本参数
 
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
+| `--dd-only` | 仅运行DD测试 | `False` |
+| `--fio-only` | 仅运行FIO测试 | `False` |
 | `--test-dir` | 测试数据目录 | `./test_data` |
 | `--output` | 报告输出文件 | `performance_test_report.md` |
 | `--cleanup` | 测试完成后清理测试文件 | `False` |
+| `--runtime` | 测试时间（秒） | `3` |
+| `--quick` | 快速测试模式（仅运行部分配置） | `False` |
 
-#### vm_storage_performance_test.py 参数
+#### dd_test.py 独立模块参数
 
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
-| `--config` | 配置文件路径 | `config.json` |
 | `--test-dir` | 测试数据目录 | `./test_data` |
-| `--runtime` | 测试运行时间（秒） | `60` |
+| `--cleanup` | 测试完成后清理测试文件 | `False` |
+
+#### fio_test.py 独立模块参数
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--test-dir` | 测试数据目录 | `./test_data` |
+| `--runtime` | FIO测试时间（秒） | `3` |
+| `--quick` | 快速测试模式（仅运行部分配置） | `False` |
+| `--cleanup` | 测试完成后清理测试文件 | `False` |
+| `--info` | 显示测试配置信息 | `False` |
 
 ## ⚙️ 配置说明
 
-### 增强版脚本 (enhanced_vm_storage_test.py)
+### FIO测试配置矩阵
 
-增强版脚本使用内置的优化配置，无需额外配置文件：
-- **测试文件大小**: 自动根据测试类型调整（1M-1G）
-- **测试时间**: 每个测试约10-30秒
-- **测试覆盖**: 包含所有主要性能指标
-- **自动优化**: 根据系统资源自动调整参数
+脚本支持420种FIO测试配置组合，覆盖以下参数：
 
-### 原始版脚本配置文件
+#### 块大小 (Block Size)
+- 4k, 8k, 16k, 32k, 64k, 1m（共6种）
 
-原始版本支持详细的配置文件定制，适合高级用户：
-- `config.json` - 完整测试配置
-- `quick_test_config.json` - 快速测试配置
+#### 队列深度 (iodepth) 和并发数 (numjobs)
+- iodepth=1: numjobs=1,4
+- iodepth=2: numjobs=1,4  
+- iodepth=4: numjobs=1,4
+- iodepth=8: numjobs=1,4
+- iodepth=16: numjobs=1,4
+- iodepth=32: numjobs=1,4
+- iodepth=64: numjobs=1,4
 
-详细配置参数请参考配置文件中的注释说明。
+#### 读写比例
+- 0%读100%写 (randwrite)
+- 25%读75%写 (randrw --rwmixread=25)
+- 50%读50%写 (randrw --rwmixread=50)
+- 75%读25%写 (randrw --rwmixread=75)
+- 100%读0%写 (randread)
+
+#### 固定参数
+- direct=1 (绕过系统缓存)
+- ioengine=libaio (Linux异步IO)
+- 测试时间：默认3秒（快速测试），可自定义
+- size=1G (测试文件大小)
+- time_based (基于时间的测试)
+- group_reporting (组合报告)
+
+**总计测试组合**: 6(块大小) × 7(队列深度) × 2(并发数) × 5(读写比例) = 420种配置
+
+### 420种FIO测试场景详细命令
+
+以下是所有420种测试场景的具体FIO命令示例：
+
+#### 基础命令模板
+```bash
+fio --name=test \
+    --filename=fio_test_{block_size}_{queue_depth}_{numjobs}_{rwmix_read} \
+    --rw={test_type} \
+    --bs={block_size} \
+    --iodepth={queue_depth} \
+    --numjobs={numjobs} \
+    --runtime={runtime} \
+    --time_based \
+    --direct=1 \
+    --ioengine=libaio \
+    --group_reporting \
+    --output-format=json \
+    --size=1G \
+    [--rwmixread={rwmix_read}]  # 仅用于randrw类型
+```
+
+#### 具体命令示例
+
+**4K块大小测试场景 (70种配置)**
+```bash
+# 4K + iodepth=1 + numjobs=1 (5种读写比例)
+fio --name=test --filename=fio_test_4k_1_1_0 --rw=randwrite --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G
+fio --name=test --filename=fio_test_4k_1_1_25 --rw=randrw --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=25
+fio --name=test --filename=fio_test_4k_1_1_50 --rw=randrw --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=50
+fio --name=test --filename=fio_test_4k_1_1_75 --rw=randrw --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=75
+fio --name=test --filename=fio_test_4k_1_1_100 --rw=randread --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G
+
+# 4K + iodepth=1 + numjobs=4 (5种读写比例)
+fio --name=test --filename=fio_test_4k_1_4_0 --rw=randwrite --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G
+fio --name=test --filename=fio_test_4k_1_4_25 --rw=randrw --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=25
+fio --name=test --filename=fio_test_4k_1_4_50 --rw=randrw --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=50
+fio --name=test --filename=fio_test_4k_1_4_75 --rw=randrw --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=75
+fio --name=test --filename=fio_test_4k_1_4_100 --rw=randread --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G
+
+# 4K + iodepth=2 + numjobs=1,4 (10种配置)
+# 4K + iodepth=4 + numjobs=1,4 (10种配置)
+# 4K + iodepth=8 + numjobs=1,4 (10种配置)
+# 4K + iodepth=16 + numjobs=1,4 (10种配置)
+# 4K + iodepth=32 + numjobs=1,4 (10种配置)
+# 4K + iodepth=64 + numjobs=1,4 (10种配置)
+# ... (其他队列深度配置类似)
+```
+
+**8K块大小测试场景 (70种配置)**
+```bash
+# 8K + 所有队列深度和并发数组合
+fio --name=test --filename=fio_test_8k_1_1_0 --rw=randwrite --bs=8k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G
+fio --name=test --filename=fio_test_8k_1_1_100 --rw=randread --bs=8k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G
+# ... (其他配置类似)
+```
+
+**16K块大小测试场景 (70种配置)**
+```bash
+# 16K + 所有队列深度和并发数组合
+fio --name=test --filename=fio_test_16k_32_4_50 --rw=randrw --bs=16k --iodepth=32 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=50
+# ... (其他配置类似)
+```
+
+**32K块大小测试场景 (70种配置)**
+```bash
+# 32K + 所有队列深度和并发数组合
+fio --name=test --filename=fio_test_32k_64_1_75 --rw=randrw --bs=32k --iodepth=64 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=75
+# ... (其他配置类似)
+```
+
+**64K块大小测试场景 (70种配置)**
+```bash
+# 64K + 所有队列深度和并发数组合
+fio --name=test --filename=fio_test_64k_8_4_25 --rw=randrw --bs=64k --iodepth=8 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=25
+# ... (其他配置类似)
+```
+
+**1M块大小测试场景 (70种配置)**
+```bash
+# 1M + 所有队列深度和并发数组合
+fio --name=test --filename=fio_test_1m_16_1_0 --rw=randwrite --bs=1m --iodepth=16 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G
+fio --name=test --filename=fio_test_1m_16_1_100 --rw=randread --bs=1m --iodepth=16 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G
+# ... (其他配置类似)
+```
+
+#### 参数组合说明
+
+**测试类型映射**:
+- rwmix_read=0 → randwrite (100%写)
+- rwmix_read=25 → randrw --rwmixread=25 (25%读75%写)
+- rwmix_read=50 → randrw --rwmixread=50 (50%读50%写)
+- rwmix_read=75 → randrw --rwmixread=75 (75%读25%写)
+- rwmix_read=100 → randread (100%读)
+
+**文件名规则**:
+- 格式: `fio_test_{block_size}_{queue_depth}_{numjobs}_{rwmix_read}`
+- 示例: `fio_test_4k_32_4_50` (4K块大小, 32队列深度, 4并发, 50%读写)
+
+**性能测试目的**:
+- **小块大小(4K-16K)**: 模拟数据库、随机访问负载
+- **中等块大小(32K-64K)**: 模拟应用程序、文件系统操作
+- **大块大小(1M)**: 模拟大文件传输、流媒体
+- **低队列深度(1-4)**: 模拟单线程应用
+- **高队列深度(8-64)**: 模拟高并发、多线程应用
+- **不同读写比例**: 模拟各种实际应用场景
 
 ## 🧪 测试类型详解
 
@@ -118,36 +285,19 @@ python3 vm_storage_performance_test.py --config quick_test_config.json
 
 ### 2. FIO随机IO测试
 - **目的**: 评估随机I/O性能
-- **测试项**:
-  - 4K随机读取
-  - 4K随机写入
-  - 4K随机读写混合
-  - 多种块大小测试（16K、64K、1M、4M）
-- **指标**: IOPS、延迟 (ms)、吞吐量 (MB/s)
-- **适用场景**: 数据库、虚拟机磁盘、随机访问负载
-
-### 3. 队列深度测试
-- **目的**: 测试不同队列深度对性能的影响
-- **测试项**: QD=1, 4, 8, 16, 32
-- **指标**: IOPS、延迟随队列深度的变化
-- **适用场景**: 优化存储配置和应用程序参数
-
-### 4. 混合读写比例测试
-- **目的**: 测试不同读写比例下的性能表现
-- **测试项**: 
-  - 100%读取
-  - 70%读取 + 30%写入
-  - 50%读取 + 50%写入
-  - 30%读取 + 70%写入
-  - 100%写入
-- **指标**: 混合负载下的IOPS和延迟
-- **适用场景**: 真实应用负载模拟
-
-### 5. 并发测试
-- **目的**: 测试多任务并发访问性能
-- **测试项**: 1, 2, 4, 8, 16, 32个并发任务
-- **指标**: 总IOPS、平均延迟、扩展性
-- **适用场景**: 多用户、多应用并发访问
+- **测试矩阵**: 420种配置组合的全面测试
+  - **块大小**: 4k, 8k, 16k, 32k, 64k, 1m（6种）
+  - **队列深度**: 1, 2, 4, 8, 16, 32, 64（7种）
+  - **并发数**: 每个队列深度支持1和4两种并发配置（2种）
+  - **读写比例**: 5种模式覆盖所有典型应用场景
+    - 0%读100%写 (randwrite)
+    - 25%读75%写 (randrw --rwmixread=25)
+    - 50%读50%写 (randrw --rwmixread=50)
+    - 75%读25%写 (randrw --rwmixread=75)
+    - 100%读0%写 (randread)
+- **测试覆盖**: 总计420个测试场景 (6×7×2×5)
+- **指标**: IOPS、延迟 (μs)、吞吐量 (MB/s)
+- **适用场景**: 数据库、虚拟机磁盘、随机访问负载、性能调优
 
 ## 📊 测试报告
 
@@ -163,8 +313,9 @@ python3 vm_storage_performance_test.py --config quick_test_config.json
 
 ### 报告文件
 
-- **增强版脚本**: 生成 `performance_test_report.md`（或自定义文件名）
-- **原始版脚本**: 生成多种格式报告（HTML、JSON、CSV）
+- 生成 `performance_test_report.md`（或自定义文件名）
+- 包含420种FIO测试配置的详细结果
+- 按块大小分组展示，便于分析对比
 
 ### 报告内容解读
 
@@ -179,57 +330,79 @@ python3 vm_storage_performance_test.py --config quick_test_config.json
 
 ## 🔧 使用示例
 
-### 示例1: 基础性能测试（推荐）
+### 示例1: 快速性能测试（推荐）
 
 ```bash
-# 使用增强版脚本进行基础测试
-python3 enhanced_vm_storage_test.py
+# 快速测试模式（部分配置组合，3秒测试时间）
+python3 main.py --quick
+
+# 仅运行FIO快速测试
+python3 main.py --fio-only --quick
 
 # 测试完成后查看报告
 cat performance_test_report.md
 ```
 
-### 示例2: 自定义测试目录和报告
+### 示例2: 完整性能测试
+
+```bash
+# 运行完整的420种FIO配置组合测试
+python3 main.py --fio-only --runtime 10
+
+# 运行所有测试（DD + FIO）
+python3 main.py --runtime 10
+
+# 生产环境完整测试（推荐60秒或更长）
+python3 main.py --runtime 60
+```
+
+### 示例3: 自定义测试目录和报告
 
 ```bash
 # 测试特定存储设备并自定义报告名称
-python3 enhanced_vm_storage_test.py \
+python3 main.py \
   --test-dir /mnt/nvme_disk \
   --output nvme_performance_report.md \
+  --runtime 30 \
   --cleanup
 ```
 
-### 示例3: 完整功能测试（原始版本）
+### 示例4: 独立模块测试
 
 ```bash
-# 使用原始版本进行完整测试
-python3 vm_storage_performance_test.py --config config.json
+# 单独运行DD测试
+python3 dd_test.py --test-dir /tmp/test --cleanup
 
-# 快速测试
-python3 vm_storage_performance_test.py --config quick_test_config.json
+# 单独运行FIO测试并查看配置信息
+python3 fio_test.py --info
+python3 fio_test.py --runtime 10 --cleanup
 ```
 
-### 示例4: 批量测试不同存储设备
+### 示例5: 批量测试不同存储设备
 
 ```bash
 #!/bin/bash
 # 测试多个存储设备
 for device in "/mnt/ssd" "/mnt/hdd" "/tmp"; do
   echo "Testing $device..."
-  python3 enhanced_vm_storage_test.py \
+  python3 main.py \
     --test-dir "$device/storage_test" \
     --output "$(basename $device)_performance_report.md" \
     --cleanup
 done
 ```
 
-### 示例4: 创建自定义配置
+### 示例6: 不同测试时间对比
 
 ```bash
-# 复制并修改配置文件
-cp config.json my_config.json
-# 编辑 my_config.json 调整测试参数
-python3 vm_storage_performance_test.py --config my_config.json
+# 快速冒烟测试（3秒）
+python3 main.py --quick --output quick_test.md
+
+# 标准测试（10秒）
+python3 main.py --runtime 10 --output standard_test.md
+
+# 生产级测试（60秒）
+python3 main.py --runtime 60 --output production_test.md
 ```
 
 ## ❓ 常见问题
@@ -241,30 +414,33 @@ sudo apt-get install fio  # Ubuntu/Debian
 sudo yum install fio      # CentOS/RHEL
 ```
 
-### Q2: 测试过程中磁盘空间不足
+### Q2: 如何选择合适的测试模式？
 **A**: 
-- 减小 `test_file_size` 参数
-- 选择有足够空间的测试目录
-- 使用 `quick_test_config.json` 进行轻量测试
+- **快速评估**: 使用 `--quick` 参数进行快速测试
+- **标准测试**: 使用 `--fio-runtime 10` 进行10秒测试
+- **生产级测试**: 使用 `--fio-runtime 60` 或更长时间
+- **特定场景**: 根据实际应用需求调整测试时间
 
-### Q3: 测试时间过长
+### Q3: 测试结果如何解读？
 **A**: 
-- 减少 `runtime` 参数
-- 减少测试参数组合数量
-- 使用快速测试配置
+- **IOPS**: 越高越好，关注随机读写性能
+- **延迟**: 越低越好，特别是P99延迟
+- **吞吐量**: 顺序读写的重要指标
+- **420种配置**: 可按块大小、队列深度、读写比例分析性能特征
 
-### Q4: 权限不足无法创建测试文件
+### Q4: 可以在生产环境运行吗？
 **A**: 
-- 确保对测试目录有写权限
-- 使用 `sudo` 运行（不推荐）
-- 更改测试目录到用户有权限的位置
+- **快速模式**: 相对安全，但建议在维护窗口运行
+- **完整测试**: 包含大量写入测试，可能影响性能，谨慎使用
+- **建议**: 先在测试环境验证，确认无误后再用于生产
 
-### Q5: 如何解读性能测试结果？
+### Q5: 如何优化测试性能？
 **A**: 
-- 关注IOPS和延迟指标
-- 查看HTML报告中的性能瓶颈分析
-- 对比不同配置下的测试结果
-- 参考优化建议进行系统调优
+- 使用SSD存储运行测试脚本
+- 确保测试目录在被测存储设备上
+- 关闭不必要的系统服务
+- 使用专用的测试环境
+- 根据存储类型选择合适的测试时间
 
 ## 🎯 性能优化建议
 
@@ -350,21 +526,23 @@ python3 enhanced_vm_storage_test.py --cleanup
 - 使用原始版本的快速配置: `--config quick_test_config.json`
 - 增强版本默认已经优化了测试时间
 
-## 📁 项目结构
+## 🏗️ 架构设计
 
-```
-volume-performance-testing/
-├── enhanced_vm_storage_test.py    # 增强版测试脚本（推荐）
-├── vm_storage_performance_test.py # 原始版测试脚本
-├── config.json                    # 原始版配置文件
-├── quick_test_config.json         # 快速测试配置
-├── performance_test_report_template.md  # 报告模板
-├── test_data/                     # 测试数据目录
-├── *.log                         # 测试日志文件
-├── *_report.md                   # 生成的测试报告
-├── LICENSE                       # 开源许可证
-└── README.md                     # 项目说明文档
-```
+### 模块化架构
+
+项目采用模块化设计，将DD测试和FIO测试分离管理：
+
+- **main.py**: 主控脚本，提供统一的命令行接口
+- **dd_test.py**: DD测试模块，专门处理顺序读写测试
+- **fio_test.py**: FIO测试模块，处理420种随机IO测试配置
+- **common.py**: 共享工具类，包含日志、系统信息收集、报告生成等
+
+### 优势
+
+1. **模块独立**: 每个测试模块可以独立运行和维护
+2. **代码复用**: 共享工具类避免代码重复
+3. **易于扩展**: 可以轻松添加新的测试模块
+4. **灵活使用**: 支持选择性运行特定测试类型
 
 ## 🤝 贡献指南
 

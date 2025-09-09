@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+生成完整的420个FIO测试命令表格
+"""
+
+def generate_fio_commands_table():
+    """生成完整的FIO测试命令表格"""
+    
+    # 测试配置矩阵
+    block_sizes = ["4k", "8k", "16k", "32k", "64k", "1m"]
+    queue_depths = [1, 2, 4, 8, 16, 32, 64]
+    numjobs_values = [1, 4]
+    rwmix_ratios = [0, 25, 50, 75, 100]
+    
+    # 生成表格头部
+    content = """# FIO测试命令详细列表
+
+本文档包含完整的420个FIO测试场景的具体命令。测试矩阵包括：
+- **块大小**: 4k, 8k, 16k, 32k, 64k, 1m (6种)
+- **队列深度**: 1, 2, 4, 8, 16, 32, 64 (7种)
+- **并发数**: 1, 4 (2种)
+- **读写比例**: 0%(纯写), 25%(25%读75%写), 50%(50%读50%写), 75%(75%读25%写), 100%(纯读) (5种)
+
+总计: 6 × 7 × 2 × 5 = **420个测试场景**
+
+## 测试命令表格
+
+| 序号 | 块大小 | 队列深度 | 并发数 | 读写模式 | 读写比例 | 完整FIO命令 |
+|------|--------|----------|--------|----------|----------|-------------|
+"""
+    
+    scenario_count = 0
+    
+    for block_size in block_sizes:
+        for queue_depth in queue_depths:
+            for numjobs in numjobs_values:
+                for rwmix_read in rwmix_ratios:
+                    scenario_count += 1
+                    
+                    # 确定测试类型和读写模式描述
+                    if rwmix_read == 0:
+                        test_type = "randwrite"
+                        rwmix_desc = "0%"
+                    elif rwmix_read == 100:
+                        test_type = "randread"
+                        rwmix_desc = "100%"
+                    else:
+                        test_type = "randrw"
+                        rwmix_desc = f"{rwmix_read}%"
+                    
+                    # 构建FIO命令
+                    test_file = f"fio_test_{block_size}_{queue_depth}_{numjobs}_{rwmix_read}"
+                    
+                    fio_command = [
+                        "fio",
+                        "--name=test",
+                        f"--filename={test_file}",
+                        f"--rw={test_type}",
+                        f"--bs={block_size}",
+                        f"--iodepth={queue_depth}",
+                        f"--numjobs={numjobs}",
+                        "--runtime=3",
+                        "--time_based",
+                        "--direct=1",
+                        "--ioengine=libaio",
+                        "--group_reporting",
+                        "--output-format=json",
+                        "--size=1G"
+                    ]
+                    
+                    # 如果是混合读写，添加读写比例参数
+                    if test_type == "randrw":
+                        fio_command.append(f"--rwmixread={rwmix_read}")
+                    
+                    command_str = " ".join(fio_command)
+                    
+                    # 添加表格行
+                    content += f"| {scenario_count} | {block_size} | {queue_depth} | {numjobs} | {test_type} | {rwmix_desc} | {command_str} |\n"
+    
+    # 添加说明部分
+    content += """
+
+## 命令参数说明
+
+- `--name=test`: 测试任务名称
+- `--filename=fio_test_*`: 测试文件名，包含块大小、队列深度、并发数和读写比例信息
+- `--rw=`: 读写模式
+  - `randread`: 随机读
+  - `randwrite`: 随机写
+  - `randrw`: 随机读写混合
+- `--bs=`: 块大小（4k, 8k, 16k, 32k, 64k, 1m）
+- `--iodepth=`: 队列深度（1, 2, 4, 8, 16, 32, 64）
+- `--numjobs=`: 并发作业数（1, 4）
+- `--runtime=3`: 每个测试运行3秒
+- `--time_based`: 基于时间的测试
+- `--direct=1`: 启用直接I/O，绕过系统缓存
+- `--ioengine=libaio`: 使用Linux异步I/O引擎
+- `--group_reporting`: 合并多个作业的报告
+- `--output-format=json`: 输出JSON格式结果
+- `--size=1G`: 测试文件大小1GB
+- `--rwmixread=`: 读写混合模式下的读取百分比（仅用于randrw模式）
+
+## 测试场景分布
+
+### 按块大小分组
+- **4k**: 70个测试场景（7种队列深度 × 2种并发 × 5种读写比例）
+- **8k**: 70个测试场景
+- **16k**: 70个测试场景
+- **32k**: 70个测试场景
+- **64k**: 70个测试场景
+- **1m**: 70个测试场景
+
+### 按读写模式分组
+- **随机写(randwrite)**: 84个测试场景（6种块大小 × 7种队列深度 × 2种并发）
+- **25%读75%写(randrw)**: 84个测试场景
+- **50%读50%写(randrw)**: 84个测试场景
+- **75%读25%写(randrw)**: 84个测试场景
+- **随机读(randread)**: 84个测试场景
+
+### 按队列深度分组
+- **QD=1**: 60个测试场景（6种块大小 × 2种并发 × 5种读写比例）
+- **QD=2**: 60个测试场景
+- **QD=4**: 60个测试场景
+- **QD=8**: 60个测试场景
+- **QD=16**: 60个测试场景
+- **QD=32**: 60个测试场景
+- **QD=64**: 60个测试场景
+
+### 按并发数分组
+- **单线程(numjobs=1)**: 210个测试场景（6种块大小 × 7种队列深度 × 5种读写比例）
+- **多线程(numjobs=4)**: 210个测试场景
+
+## 性能测试目标
+
+这420个测试场景旨在全面评估存储系统在不同工作负载下的性能特征：
+
+1. **IOPS性能**: 通过小块大小（4k-64k）测试随机I/O性能
+2. **吞吐量性能**: 通过大块大小（1m）测试顺序I/O性能
+3. **队列深度影响**: 评估不同并发级别对性能的影响
+4. **读写混合**: 测试不同读写比例下的性能表现
+5. **并发扩展性**: 比较单线程和多线程性能差异
+
+通过这些全面的测试，可以深入了解存储系统的性能瓶颈和优化方向。
+"""
+    
+    return content
+
+if __name__ == "__main__":
+    # 生成完整的FIO命令表格
+    table_content = generate_fio_commands_table()
+    
+    # 写入文件
+    with open("fio_test.md", "w", encoding="utf-8") as f:
+        f.write(table_content)
+    
+    print(f"已生成完整的FIO测试命令表格，共420个测试场景")
+    print(f"文件保存为: fio_test.md")
+    print(f"文件大小: {len(table_content)} 字符")
