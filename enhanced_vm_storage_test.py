@@ -208,6 +208,10 @@ class DDTestRunner:
             ("1G", "1G", 1),
             ("1G", "4G", 4),
             ("1M", "1G", 1024),
+            ("64K", "1G", 16384),
+            ("32K", "1G", 32768),
+            ("16K", "1G", 65536),
+            ("8K", "1G", 131072),
             ("4K", "1G", 262144)
         ]
         
@@ -229,6 +233,44 @@ class DDTestRunner:
         
         return results
     
+    def run_sequential_write_tests_with_sync(self) -> List[TestResult]:
+        """运行带同步选项的顺序写入测试"""
+        results = []
+        
+        # 测试配置：块大小和同步选项的组合
+        test_configs = [
+            ("1M", "1G", 1024, "direct,dsync"),
+            ("64K", "1G", 16384, "direct,dsync"),
+            ("32K", "1G", 32768, "direct,dsync"),
+            ("16K", "1G", 65536, "direct,dsync"),
+            ("8K", "1G", 131072, "direct,dsync"),
+            ("4K", "1G", 262144, "direct,dsync"),
+            ("1M", "1G", 1024, "dsync"),
+            ("64K", "1G", 16384, "dsync"),
+            ("32K", "1G", 32768, "dsync"),
+            ("16K", "1G", 65536, "dsync"),
+            ("8K", "1G", 131072, "dsync"),
+            ("4K", "1G", 262144, "dsync")
+        ]
+        
+        for block_size, file_size, count, oflag in test_configs:
+            self.logger.info(f"开始DD顺序写入测试(同步): 块大小={block_size}, oflag={oflag}")
+            
+            test_file = f"testfile_write_{block_size.lower()}_{oflag.replace(',', '_')}"
+            command = [
+                "dd",
+                "if=/dev/zero",
+                f"of={test_file}",
+                f"bs={block_size}",
+                f"count={count}",
+                f"oflag={oflag}"
+            ]
+            
+            result = self._run_dd_command(command, f"sequential_write_{oflag}", block_size, file_size)
+            results.append(result)
+        
+        return results
+    
     def run_sequential_read_tests(self) -> List[TestResult]:
         """运行顺序读取测试"""
         results = []
@@ -241,6 +283,10 @@ class DDTestRunner:
             ("1G", "1G", 1, "testfile_write_1g"),
             ("1G", "4G", 4, "testfile_write_1g"),
             ("1M", "1G", 1024, "testfile_write_1m"),
+            ("64K", "1G", 16384, "testfile_write_64k"),
+            ("32K", "1G", 32768, "testfile_write_32k"),
+            ("16K", "1G", 65536, "testfile_write_16k"),
+            ("8K", "1G", 131072, "testfile_write_8k"),
             ("4K", "1G", 262144, "testfile_write_4k")
         ]
         
@@ -660,7 +706,14 @@ class ReportGenerator:
         f.write("dd if=/dev/zero of=testfile_4g bs=1G count=4 oflag=direct\n\n")
         f.write("# 不同块大小写入测试\n")
         f.write("dd if=/dev/zero of=testfile_1m bs=1M count=1024 oflag=direct\n")
-        f.write("dd if=/dev/zero of=testfile_4k bs=4K count=262144 oflag=direct\n")
+        f.write("dd if=/dev/zero of=testfile_64k bs=64K count=16384 oflag=direct\n")
+        f.write("dd if=/dev/zero of=testfile_32k bs=32K count=32768 oflag=direct\n")
+        f.write("dd if=/dev/zero of=testfile_16k bs=16K count=65536 oflag=direct\n")
+        f.write("dd if=/dev/zero of=testfile_8k bs=8K count=131072 oflag=direct\n")
+        f.write("dd if=/dev/zero of=testfile_4k bs=4K count=262144 oflag=direct\n\n")
+        f.write("# 同步写入测试\n")
+        f.write("dd if=/dev/zero of=testfile_sync bs=1M count=1024 oflag=direct,dsync\n")
+        f.write("dd if=/dev/zero of=testfile_dsync bs=1M count=1024 oflag=dsync\n")
         f.write("```\n\n")
         
         f.write("#### 2.1.2 顺序读取测试\n\n")
@@ -686,7 +739,7 @@ class ReportGenerator:
         f.write("## 3. 测试结果\n\n")
         
         # DD测试结果
-        dd_results = [r for r in all_results if r.test_type in ['sequential_write', 'sequential_read']]
+        dd_results = [r for r in all_results if r.test_type in ['sequential_write', 'sequential_read', 'sequential_write_direct,dsync', 'sequential_write_dsync']]
         if dd_results:
             self._write_dd_results(f, dd_results)
         
@@ -700,13 +753,14 @@ class ReportGenerator:
         f.write("### 3.1 DD命令顺序读写测试结果\n\n")
         
         # 写入测试结果
-        write_results = [r for r in dd_results if r.test_type == 'sequential_write']
+        write_results = [r for r in dd_results if 'sequential_write' in r.test_type]
         if write_results:
             f.write("#### 3.1.1 顺序写入性能\n\n")
-            f.write("| 块大小 | 文件大小 | 写入速度 | 耗时 | 命令 |\n")
-            f.write("|--------|----------|----------|------|------|\n")
+            f.write("| 块大小 | 文件大小 | 写入速度 | 耗时 | 同步选项 | 命令 |\n")
+            f.write("|--------|----------|----------|------|----------|------|\n")
             for result in write_results:
-                f.write(f"| {result.block_size} | {result.file_size} | {result.throughput_mbps:.2f} MB/s | {result.duration_seconds:.2f} s | `{result.command}` |\n")
+                sync_option = "direct" if result.test_type == 'sequential_write' else result.test_type.replace('sequential_write_', '')
+                f.write(f"| {result.block_size} | {result.file_size} | {result.throughput_mbps:.2f} MB/s | {result.duration_seconds:.2f} s | {sync_option} | `{result.command}` |\n")
             f.write("\n")
         
         # 读取测试结果
@@ -891,27 +945,32 @@ class EnhancedVMStorageTest:
             write_results = self.dd_runner.run_sequential_write_tests()
             all_results.extend(write_results)
             
-            # 2. DD顺序读取测试
+            # 2. DD带同步选项的顺序写入测试
+            self.logger.info("=== 开始DD带同步选项的顺序写入测试 ===")
+            sync_write_results = self.dd_runner.run_sequential_write_tests_with_sync()
+            all_results.extend(sync_write_results)
+            
+            # 3. DD顺序读取测试
             self.logger.info("=== 开始DD顺序读取测试 ===")
             read_results = self.dd_runner.run_sequential_read_tests()
             all_results.extend(read_results)
             
-            # 3. FIO随机IO测试
+            # 4. FIO随机IO测试
             self.logger.info("=== 开始FIO随机IO测试 ===")
             random_results = self.fio_runner.run_random_io_tests()
             all_results.extend(random_results)
             
-            # 4. FIO队列深度测试
+            # 5. FIO队列深度测试
             self.logger.info("=== 开始FIO队列深度测试 ===")
             qd_results = self.fio_runner.run_queue_depth_tests()
             all_results.extend(qd_results)
             
-            # 5. FIO混合读写比例测试
+            # 6. FIO混合读写比例测试
             self.logger.info("=== 开始FIO混合读写比例测试 ===")
             ratio_results = self.fio_runner.run_mixed_ratio_tests()
             all_results.extend(ratio_results)
             
-            # 6. FIO并发测试
+            # 7. FIO并发测试
             self.logger.info("=== 开始FIO并发测试 ===")
             concurrent_results = self.fio_runner.run_concurrent_tests()
             all_results.extend(concurrent_results)
