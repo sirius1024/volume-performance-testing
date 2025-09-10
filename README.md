@@ -144,10 +144,10 @@ python3 fio_test.py --info
 - iodepth=1: numjobs=1,4
 - iodepth=2: numjobs=1,4  
 - iodepth=4: numjobs=1,4
-- iodepth=8: numjobs=1,4
-- iodepth=16: numjobs=1,4
-- iodepth=32: numjobs=1,4
-- iodepth=64: numjobs=1,4
+- iodepth=8: numjobs=4,8
+- iodepth=16: numjobs=4,8
+- iodepth=32: numjobs=8,16
+- iodepth=128: numjobs=16,32
 
 #### 读写比例
 - 0%读100%写 (randwrite)
@@ -208,10 +208,10 @@ fio --name=test --filename=fio_test_4k_1_4_100 --rw=randread --bs=4k --iodepth=1
 
 # 4K + iodepth=2 + numjobs=1,4 (10种配置)
 # 4K + iodepth=4 + numjobs=1,4 (10种配置)
-# 4K + iodepth=8 + numjobs=1,4 (10种配置)
-# 4K + iodepth=16 + numjobs=1,4 (10种配置)
-# 4K + iodepth=32 + numjobs=1,4 (10种配置)
-# 4K + iodepth=64 + numjobs=1,4 (10种配置)
+# 4K + iodepth=8 + numjobs=4,8 (10种配置)
+# 4K + iodepth=16 + numjobs=4,8 (10种配置)
+# 4K + iodepth=32 + numjobs=8,16 (10种配置)
+# 4K + iodepth=128 + numjobs=16,32 (10种配置)
 # ... (其他队列深度配置类似)
 ```
 
@@ -226,29 +226,37 @@ fio --name=test --filename=fio_test_8k_1_1_100 --rw=randread --bs=8k --iodepth=1
 **16K块大小测试场景 (70种配置)**
 ```bash
 # 16K + 所有队列深度和并发数组合
-fio --name=test --filename=fio_test_16k_32_4_50 --rw=randrw --bs=16k --iodepth=32 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=50
+fio --name=test --filename=fio_test_16k_32_8_50 --rw=randrw --bs=16k --iodepth=32 --numjobs=8 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=50
 # ... (其他配置类似)
 ```
 
 **32K块大小测试场景 (70种配置)**
 ```bash
 # 32K + 所有队列深度和并发数组合
-fio --name=test --filename=fio_test_32k_64_1_75 --rw=randrw --bs=32k --iodepth=64 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=75
+fio --name=test --filename=fio_test_32k_128_16_75 --rw=randrw --bs=32k --iodepth=128 --numjobs=16 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=75
 # ... (其他配置类似)
 ```
 
 **64K块大小测试场景 (70种配置)**
 ```bash
 # 64K + 所有队列深度和并发数组合
-fio --name=test --filename=fio_test_64k_8_4_25 --rw=randrw --bs=64k --iodepth=8 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=25
+fio --name=test --filename=fio_test_64k_8_8_25 --rw=randrw --bs=64k --iodepth=8 --numjobs=8 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=25
 # ... (其他配置类似)
 ```
 
 **1M块大小测试场景 (70种配置)**
 ```bash
 # 1M + 所有队列深度和并发数组合
-fio --name=test --filename=fio_test_1m_16_1_0 --rw=randwrite --bs=1m --iodepth=16 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G
-fio --name=test --filename=fio_test_1m_16_1_100 --rw=randread --bs=1m --iodepth=16 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G
+fio --name=test --filename=fio_test_1m_16_4_0 --rw=randwrite --bs=1m --iodepth=16 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G
+fio --name=test --filename=fio_test_1m_16_8_100 --rw=randread --bs=1m --iodepth=16 --numjobs=8 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G
+# ... (其他配置类似)
+```
+
+**4M块大小测试场景 (70种配置)**
+```bash
+# 4M + 所有队列深度和并发数组合
+fio --name=test --filename=fio_test_4m_32_16_50 --rw=randrw --bs=4m --iodepth=32 --numjobs=16 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=50
+fio --name=test --filename=fio_test_4m_128_32_0 --rw=randwrite --bs=4m --iodepth=128 --numjobs=32 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G
 # ... (其他配置类似)
 ```
 
@@ -268,9 +276,9 @@ fio --name=test --filename=fio_test_1m_16_1_100 --rw=randread --bs=1m --iodepth=
 **性能测试目的**:
 - **小块大小(4K-16K)**: 模拟数据库、随机访问负载
 - **中等块大小(32K-64K)**: 模拟应用程序、文件系统操作
-- **大块大小(1M)**: 模拟大文件传输、流媒体
+- **大块大小(1M-4M)**: 模拟大文件传输、流媒体、备份操作
 - **低队列深度(1-4)**: 模拟单线程应用
-- **高队列深度(8-64)**: 模拟高并发、多线程应用
+- **高队列深度(8-128)**: 模拟高并发、多线程应用
 - **不同读写比例**: 模拟各种实际应用场景
 
 ## 🧪 测试类型详解
@@ -287,8 +295,8 @@ fio --name=test --filename=fio_test_1m_16_1_100 --rw=randread --bs=1m --iodepth=
 - **目的**: 评估随机I/O性能
 - **测试矩阵**: 490种配置组合的全面测试
   - **块大小**: 4k, 8k, 16k, 32k, 64k, 1m, 4m（7种）
-  - **队列深度**: 1, 2, 4, 8, 16, 32, 64（7种）
-  - **并发数**: 每个队列深度支持1和4两种并发配置（2种）
+  - **队列深度**: 1, 2, 4, 8, 16, 32, 128（7种）
+  - **并发数**: 每个队列深度支持2种并发配置（2种）
   - **读写比例**: 5种模式覆盖所有典型应用场景
     - 0%读100%写 (randwrite)
     - 25%读75%写 (randrw --rwmixread=25)
@@ -397,7 +405,7 @@ done
 ```bash
 # 快速冒烟测试（3秒）
 python3 main.py --quick --output quick_test.md
-
+```bash
 # 标准测试（10秒）
 python3 main.py --runtime 10 --output standard_test.md
 
@@ -563,7 +571,7 @@ sudo apt-get install fio python3
 
 ## 📄 许可证
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+本项目采用 Apache 2.0 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
 
 ## 📞 支持
 

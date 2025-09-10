@@ -25,14 +25,24 @@ class FIOTestRunner:
         
         # 测试配置矩阵
         self.block_sizes = ["4k", "8k", "16k", "32k", "64k", "1m", "4m"]
-        self.queue_depths = [1, 2, 4, 8, 16, 32, 64]
-        self.numjobs_values = [1, 4]  # 对应不同的并发级别
+        self.queue_depths = [1, 2, 4, 8, 16, 32, 128]
         self.rwmix_ratios = [0, 25, 50, 75, 100]  # 读取百分比
         
-        # 计算总测试场景数
-        self.total_scenarios = len(self.block_sizes) * len(self.queue_depths) * len(self.numjobs_values) * len(self.rwmix_ratios)
+        # 队列深度与并发数的对应关系
+        self.iodepth_numjobs_mapping = {
+            1: [1, 4],
+            2: [1, 4],
+            4: [1, 4],
+            8: [4, 8],
+            16: [4, 8],
+            32: [8, 16],
+            128: [16, 32]
+        }
         
-        self.logger.info(f"FIO测试配置: {len(self.block_sizes)}种块大小 × {len(self.queue_depths)}种队列深度 × {len(self.numjobs_values)}种并发 × {len(self.rwmix_ratios)}种读写比例 = {self.total_scenarios}种场景")
+        # 计算总测试场景数
+        self.total_scenarios = len(self.block_sizes) * len(self.queue_depths) * 2 * len(self.rwmix_ratios)
+        
+        self.logger.info(f"FIO测试配置: {len(self.block_sizes)}种块大小 × {len(self.queue_depths)}种队列深度 × 2种并发 × {len(self.rwmix_ratios)}种读写比例 = {self.total_scenarios}种场景")
     
     def run_comprehensive_fio_tests(self) -> List[TestResult]:
         """运行完整的FIO测试套件（420种场景）"""
@@ -44,7 +54,9 @@ class FIOTestRunner:
         
         for block_size in self.block_sizes:
             for queue_depth in self.queue_depths:
-                for numjobs in self.numjobs_values:
+                # 根据队列深度获取对应的并发数列表
+                numjobs_list = self.iodepth_numjobs_mapping[queue_depth]
+                for numjobs in numjobs_list:
                     for rwmix_read in self.rwmix_ratios:
                         scenario_count += 1
                         
@@ -305,10 +317,16 @@ class FIOTestRunner:
     
     def get_test_matrix_info(self) -> Dict[str, Any]:
         """获取测试矩阵信息"""
+        # 获取所有可能的numjobs值
+        all_numjobs = set()
+        for numjobs_list in self.iodepth_numjobs_mapping.values():
+            all_numjobs.update(numjobs_list)
+        
         return {
             "block_sizes": self.block_sizes,
             "queue_depths": self.queue_depths,
-            "numjobs_values": self.numjobs_values,
+            "numjobs_values": sorted(list(all_numjobs)),
+            "iodepth_numjobs_mapping": self.iodepth_numjobs_mapping,
             "rwmix_ratios": self.rwmix_ratios,
             "total_scenarios": self.total_scenarios,
             "runtime_per_test": self.runtime,
@@ -346,14 +364,20 @@ class FIOTestRunner:
         from datetime import datetime
         f.write("# FIO存储性能测试详细报告\n\n")
         f.write(f"**生成时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-        f.write("本报告包含了所有420个FIO测试场景的详细结果。\n\n")
+        f.write("本报告包含了所有490个FIO测试场景的详细结果。\n\n")
     
     def _write_test_matrix_summary(self, f):
         """写入测试矩阵摘要"""
+        # 获取所有可能的numjobs值
+        all_numjobs = set()
+        for numjobs_list in self.iodepth_numjobs_mapping.values():
+            all_numjobs.update(numjobs_list)
+        
         f.write("## 1. 测试矩阵摘要\n\n")
         f.write(f"- **块大小**: {', '.join(self.block_sizes)}\n")
         f.write(f"- **队列深度**: {', '.join(map(str, self.queue_depths))}\n")
-        f.write(f"- **并发数**: {', '.join(map(str, self.numjobs_values))}\n")
+        f.write(f"- **并发数**: {', '.join(map(str, sorted(list(all_numjobs))))}\n")
+        f.write(f"- **队列深度与并发数映射**: {self.iodepth_numjobs_mapping}\n")
         f.write(f"- **读写比例**: {', '.join(map(str, self.rwmix_ratios))}%\n")
         f.write(f"- **总测试场景数**: {self.total_scenarios}\n")
         f.write(f"- **每个测试运行时间**: {self.runtime}秒\n\n")
