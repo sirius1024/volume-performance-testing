@@ -3,7 +3,7 @@
 """
 FIO测试模块
 包含FIOTestRunner类和相关的FIO性能测试功能
-支持420种测试场景配置（6种块大小×7种队列深度×2种numjobs×5种读写比例）
+支持490种测试场景配置（7种块大小×7种队列深度×2种numjobs×5种读写比例）
 """
 
 import json
@@ -24,7 +24,7 @@ class FIOTestRunner:
         self.runtime = runtime  # 测试运行时间（秒）
         
         # 测试配置矩阵
-        self.block_sizes = ["4k", "8k", "16k", "32k", "64k", "1m"]
+        self.block_sizes = ["4k", "8k", "16k", "32k", "64k", "1m", "4m"]
         self.queue_depths = [1, 2, 4, 8, 16, 32, 64]
         self.numjobs_values = [1, 4]  # 对应不同的并发级别
         self.rwmix_ratios = [0, 25, 50, 75, 100]  # 读取百分比
