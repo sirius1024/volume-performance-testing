@@ -60,7 +60,7 @@ brew install fio python3
 
 ```bash
 # 运行所有测试（DD + FIO）
-python3 main.py
+python3 main.py --all
 
 # 仅运行DD测试
 python3 main.py --dd-only
@@ -82,6 +82,28 @@ python3 main.py --runtime 60
 
 # 测试完成后自动清理测试文件
 python3 main.py --cleanup
+
+# 查看FIO测试矩阵信息
+python3 main.py --fio-info
+```
+
+#### 生产环境测试命令
+
+```bash
+# 生产环境完整性能测试（推荐60秒运行时间）
+python3 main.py --all --runtime 60 --cleanup
+
+# 生产环境FIO专项测试（120秒运行时间，更准确的结果）
+python3 main.py --fio-only --runtime 120 --cleanup
+
+# 生产环境综合测试（自定义报告名称）
+python3 main.py --all --runtime 90 --output production_performance_report.md --cleanup
+
+# 生产环境高负载测试（长时间运行，适合性能基准测试）
+python3 main.py --fio-only --runtime 300 --test-dir /data/performance_test --cleanup
+
+# 生产环境快速验证测试（适合日常监控）
+python3 main.py --quick --runtime 30 --cleanup
 ```
 
 ### 2. 独立模块使用
@@ -106,13 +128,17 @@ python3 fio_test.py --info
 
 | 参数 | 说明 | 默认值 |
 |------|------|--------|
+| `--all` | 运行所有测试（DD + FIO） | `False` |
 | `--dd-only` | 仅运行DD测试 | `False` |
 | `--fio-only` | 仅运行FIO测试 | `False` |
+| `--fio-info` | 显示FIO测试矩阵信息 | `False` |
 | `--test-dir` | 测试数据目录 | `./test_data` |
-| `--output` | 报告输出文件 | `performance_test_report.md` |
+| `--output` | 报告输出文件路径 | 自动生成 |
 | `--cleanup` | 测试完成后清理测试文件 | `False` |
-| `--runtime` | 测试时间（秒） | `3` |
+| `--runtime` | FIO每个测试的运行时间（秒） | `3` |
 | `--quick` | 快速测试模式（仅运行部分配置） | `False` |
+
+**注意**: `--all`、`--dd-only`、`--fio-only`、`--fio-info` 为互斥参数，如果都不指定则默认运行所有测试。
 
 #### dd_test.py 独立模块参数
 
@@ -348,7 +374,7 @@ python3 main.py --quick
 python3 main.py --fio-only --quick
 
 # 测试完成后查看报告
-cat performance_test_report.md
+cat storage_performance_report_*.md
 ```
 
 ### 示例2: 完整性能测试
@@ -358,17 +384,17 @@ cat performance_test_report.md
 python3 main.py --fio-only --runtime 10
 
 # 运行所有测试（DD + FIO）
-python3 main.py --runtime 10
+python3 main.py --all --runtime 10
 
 # 生产环境完整测试（推荐60秒或更长）
-python3 main.py --runtime 60
+python3 main.py --all --runtime 60
 ```
 
 ### 示例3: 自定义测试目录和报告
 
 ```bash
 # 测试特定存储设备并自定义报告名称
-python3 main.py \
+python3 main.py --all \
   --test-dir /mnt/nvme_disk \
   --output nvme_performance_report.md \
   --runtime 30 \
@@ -393,7 +419,7 @@ python3 fio_test.py --runtime 10 --cleanup
 # 测试多个存储设备
 for device in "/mnt/ssd" "/mnt/hdd" "/tmp"; do
   echo "Testing $device..."
-  python3 main.py \
+  python3 main.py --all \
     --test-dir "$device/storage_test" \
     --output "$(basename $device)_performance_report.md" \
     --cleanup
@@ -405,12 +431,12 @@ done
 ```bash
 # 快速冒烟测试（3秒）
 python3 main.py --quick --output quick_test.md
-```bash
+
 # 标准测试（10秒）
-python3 main.py --runtime 10 --output standard_test.md
+python3 main.py --all --runtime 10 --output standard_test.md
 
 # 生产级测试（60秒）
-python3 main.py --runtime 60 --output production_test.md
+python3 main.py --all --runtime 60 --output production_test.md
 ```
 
 ## ❓ 常见问题
