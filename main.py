@@ -136,23 +136,23 @@ class ReportGenerator:
         f.write(f"- 失败: {len(failed_tests)}\n\n")
         
         if successful_tests:
+            # 排除核心场景，仅展示普通FIO结果
+            normal_success = [r for r in successful_tests if not r.test_name.startswith("CORE ")]
             # 按测试类型分组显示
-            read_tests = [r for r in successful_tests if r.read_iops > 0 and r.write_iops == 0]
-            write_tests = [r for r in successful_tests if r.write_iops > 0 and r.read_iops == 0]
-            mixed_tests = [r for r in successful_tests if r.read_iops > 0 and r.write_iops > 0]
+            read_tests = [r for r in normal_success if r.read_iops > 0 and r.write_iops == 0]
+            write_tests = [r for r in normal_success if r.write_iops > 0 and r.read_iops == 0]
+            mixed_tests = [r for r in normal_success if r.read_iops > 0 and r.write_iops > 0]
             
             if read_tests:
                 f.write("### 随机读测试\n\n")
                 f.write("| 测试名称 | 块大小 | 队列深度 | 并发数 | IOPS | 吞吐量(MB/s) | 延迟(μs) |\n")
                 f.write("|----------|--------|----------|--------|------|-------------|----------|\n")
                 
-                for result in read_tests[:20]:  # 限制显示数量
+                for result in read_tests:  # 全量显示
                     f.write(f"| {result.test_name} | {result.block_size} | {result.queue_depth} | "
                            f"{result.numjobs} | {result.read_iops:.0f} | {result.read_mbps:.2f} | "
                            f"{result.read_latency_us:.1f} |\n")
                 
-                if len(read_tests) > 20:
-                    f.write(f"\n... 还有 {len(read_tests) - 20} 个读测试结果\n")
                 f.write("\n")
             
             if write_tests:
@@ -160,13 +160,11 @@ class ReportGenerator:
                 f.write("| 测试名称 | 块大小 | 队列深度 | 并发数 | IOPS | 吞吐量(MB/s) | 延迟(μs) |\n")
                 f.write("|----------|--------|----------|--------|------|-------------|----------|\n")
                 
-                for result in write_tests[:20]:  # 限制显示数量
+                for result in write_tests:  # 全量显示
                     f.write(f"| {result.test_name} | {result.block_size} | {result.queue_depth} | "
                            f"{result.numjobs} | {result.write_iops:.0f} | {result.write_mbps:.2f} | "
                            f"{result.write_latency_us:.1f} |\n")
                 
-                if len(write_tests) > 20:
-                    f.write(f"\n... 还有 {len(write_tests) - 20} 个写测试结果\n")
                 f.write("\n")
             
             if mixed_tests:
@@ -174,13 +172,11 @@ class ReportGenerator:
                 f.write("| 测试名称 | 块大小 | 队列深度 | 并发数 | 读IOPS | 写IOPS | 总吞吐量(MB/s) |\n")
                 f.write("|----------|--------|----------|--------|--------|--------|---------------|\n")
                 
-                for result in mixed_tests[:20]:  # 限制显示数量
+                for result in mixed_tests:  # 全量显示
                     f.write(f"| {result.test_name} | {result.block_size} | {result.queue_depth} | "
                            f"{result.numjobs} | {result.read_iops:.0f} | {result.write_iops:.0f} | "
                            f"{result.throughput_mbps:.2f} |\n")
                 
-                if len(mixed_tests) > 20:
-                    f.write(f"\n... 还有 {len(mixed_tests) - 20} 个混合测试结果\n")
                 f.write("\n")
         
         if failed_tests:
@@ -355,7 +351,7 @@ class StoragePerformanceTest:
         
         # 生成报告
         core_results = []
-        # 已在各runner前置执行，这里聚合核心场景：取标记为"CORE"的结果
+        # 聚合核心场景：取标记为"CORE "的结果，快速与完整模式均应包含
         core_results.extend([r for r in dd_results if r.test_name.startswith("CORE ")])
         core_results.extend([r for r in fio_results if r.test_name.startswith("CORE ")])
         self.report_generator.generate_report(dd_results, fio_results, output_file, system_info, core_results)

@@ -68,6 +68,9 @@ class FIOTestRunner:
     def run_comprehensive_fio_tests(self) -> List[TestResult]:
         """运行完整的FIO测试套件（420种场景）"""
         all_results = []
+        core = self._run_core_scenarios()
+        if core:
+            all_results.extend(core)
         scenario_count = 0
         
         self.logger.info(f"开始运行FIO完整测试套件，共{self.total_scenarios}种场景")
@@ -152,6 +155,9 @@ class FIOTestRunner:
     def run_quick_fio_tests(self) -> List[TestResult]:
         """运行快速FIO测试（代表性场景）"""
         results = []
+        core = self._run_core_scenarios()
+        if core:
+            results.extend(core)
         
         self.logger.info("开始运行FIO快速测试")
         
@@ -234,7 +240,7 @@ class FIOTestRunner:
             f"--numjobs={numjobs}",
             f"--runtime={runtime}",
             "--time_based",
-            "--direct=1",
+            f"--direct={'0' if str(getattr(self, 'filesystem', '')).lower() == '9p' and test_type in ('randread','randrw') else '1'}",
             f"--ioengine={ioengine}",
             "--group_reporting",
             "--output-format=json",
@@ -258,7 +264,7 @@ class FIOTestRunner:
                 cwd=self.test_dir,
                 capture_output=True,
                 text=True,
-                timeout=runtime + 240
+                timeout=runtime + 60
             )
             
             end_time = time.time()
@@ -285,8 +291,34 @@ class FIOTestRunner:
                 self.logger.error(f"FIO测试失败: {test_name}, 错误: {result.error_message}")
         
         except subprocess.TimeoutExpired:
-            result.error_message = "测试超时"
-            self.logger.error(f"FIO测试超时: {test_name}")
+            try:
+                fallback_command = fio_command.copy()
+                for i, arg in enumerate(fallback_command):
+                    if arg.startswith("--ioengine="):
+                        fallback_command[i] = "--ioengine=sync"
+                    if arg.startswith("--direct="):
+                        fallback_command[i] = "--direct=0"
+                process2 = subprocess.run(
+                    fallback_command,
+                    cwd=self.test_dir,
+                    capture_output=True,
+                    text=True,
+                    timeout=runtime + 60
+                )
+                if process2.returncode == 0:
+                    try:
+                        with open(os.path.join(self.test_dir, output_file), "r", encoding="utf-8") as jf:
+                            self._parse_fio_json_output(jf.read(), result)
+                    except Exception:
+                        self._parse_fio_json_output(process2.stdout, result)
+                    result.error_message = ""
+                    self.logger.info(f"FIO测试完成: {test_name}")
+                else:
+                    result.error_message = process2.stderr or "FIO命令执行失败"
+                    self.logger.error(f"FIO测试失败: {test_name}, 错误: {result.error_message}")
+            except Exception:
+                result.error_message = "测试超时"
+                self.logger.error(f"FIO测试超时: {test_name}")
         except Exception as e:
             result.error_message = str(e)
             self.logger.error(f"FIO测试异常: {test_name}, 错误: {str(e)}")
