@@ -15,16 +15,16 @@
 
 | 序号 | 块大小 | 队列深度 | 并发数 | 读写模式 | 读写比例 | 完整FIO命令 |
 |------|--------|----------|--------|----------|----------|-------------|
-| 1 | 4k | 1 | 1 | randwrite | 0% | fio --name=test --filename=fio_test_4k_1_1_0 --rw=randwrite --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=10G |
+| 1 | 4k | 1 | 1 | randwrite | 0% | fio --name=test --filename=fio_test_4k_1_1_0 --rw=randwrite --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=10G --output=fio_json_4k_1_1_0.json |
 | 2 | 4k | 1 | 1 | randrw | 25% | fio --name=test --filename=fio_test_4k_1_1_25 --rw=randrw --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=25 |
 | 3 | 4k | 1 | 1 | randrw | 50% | fio --name=test --filename=fio_test_4k_1_1_50 --rw=randrw --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=50 |
 | 4 | 4k | 1 | 1 | randrw | 75% | fio --name=test --filename=fio_test_4k_1_1_75 --rw=randrw --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=75 |
-| 5 | 4k | 1 | 1 | randread | 100% | fio --name=test --filename=fio_test_4k_1_1_100 --rw=randread --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G |
-| 6 | 4k | 1 | 4 | randwrite | 0% | fio --name=test --filename=fio_test_4k_1_4_0 --rw=randwrite --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G |
+| 5 | 4k | 1 | 1 | randread | 100% | fio --name=test --filename=fio_test_4k_1_1_100 --rw=randread --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=10G --output=fio_json_4k_1_1_100.json |
+| 6 | 4k | 1 | 4 | randwrite | 0% | fio --name=test --filename=fio_test_4k_1_4_0 --rw=randwrite --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=10G --output=fio_json_4k_1_4_0.json |
 | 7 | 4k | 1 | 4 | randrw | 25% | fio --name=test --filename=fio_test_4k_1_4_25 --rw=randrw --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=25 |
 | 8 | 4k | 1 | 4 | randrw | 50% | fio --name=test --filename=fio_test_4k_1_4_50 --rw=randrw --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=50 |
 | 9 | 4k | 1 | 4 | randrw | 75% | fio --name=test --filename=fio_test_4k_1_4_75 --rw=randrw --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=75 |
-| 10 | 4k | 1 | 4 | randread | 100% | fio --name=test --filename=fio_test_4k_1_4_100 --rw=randread --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G |
+| 10 | 4k | 1 | 4 | randread | 100% | fio --name=test --filename=fio_test_4k_1_4_100 --rw=randread --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=10G --output=fio_json_4k_1_4_100.json |
 | 11 | 4k | 2 | 1 | randwrite | 0% | fio --name=test --filename=fio_test_4k_2_1_0 --rw=randwrite --bs=4k --iodepth=2 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G |
 | 12 | 4k | 2 | 1 | randrw | 25% | fio --name=test --filename=fio_test_4k_2_1_25 --rw=randrw --bs=4k --iodepth=2 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=25 |
 | 13 | 4k | 2 | 1 | randrw | 50% | fio --name=test --filename=fio_test_4k_2_1_50 --rw=randrw --bs=4k --iodepth=2 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=50 |
@@ -524,7 +524,8 @@
 - `--ioengine=libaio`: 使用Linux异步I/O引擎
 - `--group_reporting`: 合并多个作业的报告
 - `--output-format=json`: 输出JSON格式结果
-- `--size=10G`: 测试文件大小10GB
+- `--size=10G`: 测试文件大小10GB；快速模式下会预创建稀疏测试文件以减少首次打开卡顿
+- `--output=<json>`: 为每个场景输出 JSON 文件并解析，提升稳定性
 - `--rwmixread=`: 读写混合模式下的读取百分比（仅用于randrw模式）
 
 ## 测试场景分布

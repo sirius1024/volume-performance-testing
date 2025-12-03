@@ -260,6 +260,7 @@ class DDTestRunner:
             block_size=block_size,
             file_size=file_size
         )
+        self.logger.info(f"命令: {result.command}")
         
         try:
             start_time = time.time()

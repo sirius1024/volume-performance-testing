@@ -64,7 +64,7 @@ volume-performance-testing/
 - 资源准备：确保 `--test-dir` 可写，必要时创建目录；可选清除系统缓存。
 - 测试执行：
     - DD：顺序写（direct）、同步写（direct+dsync/dsync）、顺序读（direct）。
-    - FIO：按矩阵或快速场景运行，生成 JSON 并记录命令；快速与全量均“追加执行”核心业务场景（来自 YAML）。
+    - FIO：按矩阵或快速场景运行，为每场景生成 JSON 文件并记录完整命令；核心业务场景如配置则在报告中单独呈现。
 - 结果汇总：将 `TestResult` 列表交由 `ReportGenerator` 生成 Markdown 报告。
 - 交互提示：当完整 FIO 耗时预计超过 10 分钟，进行用户确认。
 - 收尾与清理：根据 `--cleanup` 删除测试生成文件，保持环境整洁。
@@ -75,7 +75,7 @@ volume-performance-testing/
 - 报告结构：
     - 头部：标题与生成时间。
     - 系统信息：OS/内核/CPU/内存/文件系统/磁盘容量。
-    - 核心业务场景：核心 FIO/DD 场景的概览与表格（位于系统信息之后、DD/FIO结果之前）。
+    - 核心业务场景：如配置则展示（位于系统信息之后、DD/FIO结果之前）。
     - DD 结果：概览（成功/失败数量）与表格（块大小/文件大小/吞吐/耗时）。
     - FIO 结果：概览与关键指标（IOPS/带宽/延迟）。
     - 摘要：成功统计与可能异常。
@@ -124,6 +124,7 @@ python3 main.py --fio-info
     - 读写比例：`0, 25, 50, 75, 100`（randwrite/randrw/randread）
     - 并发：按队列深度映射 `1/4/8`（`qd=32 → 4,8`）
     - 大小与超时：`--size=10G`，执行超时 `runtime+240`
+    - 兼容性：在 `9p` 文件系统自动回退 `ioengine` 为 `psync`，其他环境使用 `libaio`
 
 - DD：
     - 顺序写（direct）与同步写（direct+dsync / dsync）
@@ -167,6 +168,6 @@ Apache License 2.0
 ## 📚 核心业务场景配置
 
 - 维护位置：`config/core_scenarios.yaml`
-- 内容结构：包含 FIO/DDR 的核心场景字段（`name/rw/bs/iodepth/numjobs/rwmixread/runtime/size` 等）
-- 执行策略：快速与全量均追加执行核心场景；报告中单独呈现
+- 内容结构：包含核心场景字段（`name/rw/bs/iodepth/numjobs/rwmixread/runtime/size` 等）
+- 执行策略：DD 快速/完整均执行核心场景；FIO 核心场景当前未默认启用（需在运行器中调用）；报告在系统信息之后单独呈现
 - 清单导出：`python3 tools/dump_commands.py` 在“CORE 场景（YAML）”分节显示摘要

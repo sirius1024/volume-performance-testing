@@ -110,6 +110,7 @@ python3 main.py --fio-info
 - FIO矩阵：块大小×队列深度×并发×读写比例，共 480 场景
 - 目录归档：报告统一写入 `test_dir/reports/<时间戳>/`
 - 快速模式：报告文件名追加 `-quick`
+ - 兼容性：检测文件系统类型；在 `9p` 上自动回退 FIO `ioengine=psync`
 
 ## 🔧 使用方法
 
@@ -274,6 +275,8 @@ volume-performance-testing/
   - 智能并发数映射（qd=32 → 4, 8）
   - 5 种读写比例：0%/25%/50%/75%/100% 读
 - **输出指标**：IOPS、延迟 (μs)、吞吐量 (MB/s)
+ - **兼容性策略**：在 `9p` 上自动将 `ioengine=libaio` 回退为 `ioengine=psync`
+ - **输出与解析**：每场景写入 JSON 文件，并从文件解析；失败则退回解析标准输出
 
 #### common.py - 共享工具类
 - **功能**：提供通用的工具类和数据结构
@@ -326,7 +329,8 @@ volume-performance-testing/
 - **队列深度**：1, 2, 4, 8, 16, 32（6种）
 - **并发数**：根据队列深度智能映射（2种配置/队列深度）
 - **读写比例**：0%, 25%, 50%, 75%, 100% 读（5种）
- - **大小与超时**：统一 `--size=10G`；单场景执行超时 `runtime+240`
+- **大小与超时**：统一 `--size=10G`；单场景执行超时 `runtime+240`
+ - **输出与解析**：每个 FIO 场景会指定 `--output=<json>` 并优先解析该 JSON 文件；同时打印完整命令到日志
 
 #### 队列深度与并发数映射
 
@@ -356,6 +360,7 @@ volume-performance-testing/
   - `storage_performance_report_<YYYYMMDD_HHMMSS>[ -quick ].md`：综合测试报告
   - `fio_detailed_report[ -quick ].md`：FIO 详细测试结果
 - `storage_test.log`：详细执行日志（位于 `test_dir` 根目录）
+ - 日志示例：每条测试打印“进度 + 完整命令”，便于复现与审计
 
 > 说明：`test_dir` 为构造测试文件与日志所在目录（默认 `./test_data`）。报告统一保存在其子目录 `reports/<时间戳>/`，便于后续批次比对。
 
@@ -470,5 +475,5 @@ sudo yum install fio      # CentOS/RHEL
 **如果这个项目对你有帮助，请给我们一个 ⭐️！**
 ### 核心业务场景
 - 维护位置：`config/core_scenarios.yaml`
-- 执行策略：快速与全量均追加执行核心场景；报告在系统信息之后新增“核心业务场景”板块展示该部分结果
+- 执行策略：DD 在快速/完整模式都会追加执行核心场景；FIO 核心场景当前未默认启用（需在运行器中调用）；报告在系统信息之后展示该板块
 - 清单导出：`tools/dump_commands.py` 会在“CORE 场景（YAML）”分节展示摘要

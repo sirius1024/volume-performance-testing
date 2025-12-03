@@ -30,6 +30,20 @@ def build_fio_commands(test_dir: str, runtime: int) -> List[str]:
                         test_type = "randrw"
 
                     filename = f"fio_test_{block_size}_{queue_depth}_{numjobs}_{rwmix_read}"
+                    ioengine = "libaio"
+                    try:
+                        # 与运行器逻辑一致：在 9p 上回退 ioengine
+                        p = subprocess.run(["df", "-T", test_dir], capture_output=True, text=True)
+                        if p.returncode == 0:
+                            lines = p.stdout.strip().split("\n")
+                            if len(lines) > 1:
+                                parts = lines[1].split()
+                                if len(parts) > 1 and parts[1].lower() == "9p":
+                                    ioengine = "psync"
+                    except Exception:
+                        pass
+
+                    output_file = f"fio_json_{block_size}_{queue_depth}_{numjobs}_{rwmix_read}.json"
                     cmd = [
                         "fio",
                         "--name=test",
@@ -41,10 +55,11 @@ def build_fio_commands(test_dir: str, runtime: int) -> List[str]:
                         f"--runtime={runtime}",
                         "--time_based",
                         "--direct=1",
-                        "--ioengine=libaio",
+                        f"--ioengine={ioengine}",
                         "--group_reporting",
                         "--output-format=json",
                         "--size=10G",
+                        f"--output={output_file}",
                     ]
                     if test_type == "randrw":
                         cmd.append(f"--rwmixread={rwmix_read}")

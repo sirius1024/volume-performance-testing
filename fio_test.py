@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 """
 FIO测试模块
-包含FIOTestRunner类和相关的FIO性能测试功能
-支持490种测试场景配置（7种块大小×7种队列深度×2种numjobs×5种读写比例）
+包含 FIOTestRunner 类与相关性能测试功能
+矩阵规模：480 场景（8块大小×6队列深度×2并发×5读写比例）
+快速模式：运行代表性组合，默认 runtime=3
+执行引擎：在 9p 文件系统自动回退为 psync，其它使用 libaio
+输出：为每个场景生成 JSON 文件并解析；日志打印完整命令
 """
 
 import json
@@ -24,6 +27,18 @@ class FIOTestRunner:
         self.logger = logger
         self.runtime = runtime  # 测试运行时间（秒）
         self.core_file = core_file
+        try:
+            fs = "Unknown"
+            p = subprocess.run(["df", "-T", self.test_dir], capture_output=True, text=True)
+            if p.returncode == 0:
+                lines = p.stdout.strip().split("\n")
+                if len(lines) > 1:
+                    parts = lines[1].split()
+                    if len(parts) > 1:
+                        fs = parts[1]
+            self.filesystem = fs
+        except Exception:
+            self.filesystem = "Unknown"
         
         # 测试配置矩阵
         self.block_sizes = ["4k", "8k", "16k", "32k", "64k", "128k", "1m", "4m"]
@@ -196,7 +211,19 @@ class FIOTestRunner:
         
         # 构建FIO命令
         test_file = f"fio_test_{block_size}_{queue_depth}_{numjobs}_{rwmix_read}"
+        try:
+            fp = os.path.join(self.test_dir, test_file)
+            if not os.path.exists(fp):
+                with open(fp, "wb") as f:
+                    f.seek(10 * 1024 * 1024 * 1024 - 1)
+                    f.write(b"\0")
+        except Exception:
+            pass
         
+        ioengine = "libaio"
+        if str(getattr(self, "filesystem", "")).lower() == "9p":
+            ioengine = "psync"
+        output_file = f"fio_json_{block_size}_{queue_depth}_{numjobs}_{rwmix_read}.json"
         fio_command = [
             "fio",
             "--name=test",
@@ -208,10 +235,11 @@ class FIOTestRunner:
             f"--runtime={runtime}",
             "--time_based",
             "--direct=1",
-            "--ioengine=libaio",
+            f"--ioengine={ioengine}",
             "--group_reporting",
             "--output-format=json",
-            "--size=10G"
+            "--size=10G",
+            f"--output={output_file}"
         ]
         
         # 如果是混合读写，添加读写比例参数
@@ -219,6 +247,7 @@ class FIOTestRunner:
             fio_command.append(f"--rwmixread={rwmix_read}")
         
         result.command = " ".join(fio_command)
+        self.logger.info(f"命令: {result.command}")
         
         try:
             start_time = time.time()
@@ -236,8 +265,11 @@ class FIOTestRunner:
             result.duration_seconds = end_time - start_time
             
             if process.returncode == 0:
-                # 解析FIO JSON输出
-                self._parse_fio_json_output(process.stdout, result)
+                try:
+                    with open(os.path.join(self.test_dir, output_file), "r", encoding="utf-8") as jf:
+                        self._parse_fio_json_output(jf.read(), result)
+                except Exception:
+                    self._parse_fio_json_output(process.stdout, result)
                 
                 if result.read_iops or result.write_iops:
                     self.logger.info(f"FIO测试完成: {test_name}")
