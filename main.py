@@ -23,7 +23,7 @@ class ReportGenerator:
         self.logger = logger
     
     def generate_report(self, dd_results: List[TestResult], fio_results: List[TestResult], 
-                       output_file: str, system_info: Optional[dict] = None):
+                       output_file: str, system_info: Optional[dict] = None, core_results: Optional[List[TestResult]] = None):
         """生成综合测试报告"""
         try:
             with open(output_file, 'w', encoding='utf-8') as f:
@@ -31,6 +31,9 @@ class ReportGenerator:
                 
                 if system_info:
                     self._write_system_info(f, system_info)
+                
+                if system_info and core_results is not None:
+                    self._write_core_section(f, core_results)
                 
                 if dd_results:
                     self._write_dd_results(f, dd_results)
@@ -44,6 +47,37 @@ class ReportGenerator:
         
         except Exception as e:
             self.logger.error(f"生成报告时出错: {str(e)}")
+    
+    def _write_core_section(self, f, core_results: List[TestResult]):
+        f.write("## 核心业务场景\n\n")
+        if not core_results:
+            f.write("*无核心场景结果*\n\n")
+            return
+        successful = [r for r in core_results if not r.error_message]
+        failed = [r for r in core_results if r.error_message]
+        f.write(f"### 场景概览\n")
+        f.write(f"- 总数: {len(core_results)}\n")
+        f.write(f"- 成功: {len(successful)}\n")
+        f.write(f"- 失败: {len(failed)}\n\n")
+        # FIO类结果表
+        fio_like = [r for r in core_results if r.test_type in ("randread", "randwrite", "randrw", "read", "write")]
+        if fio_like:
+            f.write("### FIO核心场景\n\n")
+            f.write("| 名称 | 块大小 | 队列深度 | 并发 | 读IOPS | 写IOPS | 读MB/s | 写MB/s | 读延迟(μs) | 写延迟(μs) | 状态 |\n")
+            f.write("|------|--------|----------|------|--------|--------|--------|--------|-------------|-------------|------|\n")
+            for r in fio_like[:30]:
+                status = "成功" if not r.error_message else "失败"
+                f.write(f"| {r.test_name} | {r.block_size} | {getattr(r,'queue_depth',0)} | {getattr(r,'numjobs',0)} | "
+                        f"{getattr(r,'read_iops',0):.0f} | {getattr(r,'write_iops',0):.0f} | "
+                        f"{getattr(r,'read_mbps',0):.2f} | {getattr(r,'write_mbps',0):.2f} | "
+                        f"{getattr(r,'read_latency_us',0):.1f} | {getattr(r,'write_latency_us',0):.1f} | {status} |\n")
+            f.write("\n")
+        # 失败列表
+        if failed:
+            f.write("### 失败详情\n\n")
+            for r in failed[:10]:
+                f.write(f"- {r.test_name}: {r.error_message}\n")
+            f.write("\n")
     
     def _write_header(self, f):
         """写入报告头部"""
@@ -228,8 +262,8 @@ class StoragePerformanceTest:
         self.logger = Logger(log_file)
         
         # 创建测试执行器
-        self.dd_runner = DDTestRunner(test_dir, self.logger)
-        self.fio_runner = FIOTestRunner(test_dir, self.logger, runtime)
+        self.dd_runner = DDTestRunner(test_dir, self.logger, core_file="config/core_scenarios.yaml")
+        self.fio_runner = FIOTestRunner(test_dir, self.logger, runtime, core_file="config/core_scenarios.yaml")
         
         # 创建报告生成器
         self.report_generator = ReportGenerator(self.logger)
@@ -275,6 +309,7 @@ class StoragePerformanceTest:
         """运行所有测试"""
         dd_results = []
         fio_results = []
+        core_results = []
         
         start_time = time.time()
         self.run_timestamp = time.strftime('%Y%m%d_%H%M%S')
@@ -319,7 +354,11 @@ class StoragePerformanceTest:
         system_info = self.system_collector.collect_system_info()
         
         # 生成报告
-        self.report_generator.generate_report(dd_results, fio_results, output_file, system_info)
+        core_results = []
+        # 已在各runner前置执行，这里聚合核心场景：取标记为"CORE"的结果
+        core_results.extend([r for r in dd_results if r.test_name.startswith("CORE ")])
+        core_results.extend([r for r in fio_results if r.test_name.startswith("CORE ")])
+        self.report_generator.generate_report(dd_results, fio_results, output_file, system_info, core_results)
         
         return output_file
     

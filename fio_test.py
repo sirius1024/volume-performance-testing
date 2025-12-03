@@ -13,15 +13,17 @@ import time
 from typing import List, Dict, Any, Optional
 
 from common import TestResult, Logger, clear_system_cache
+from core_scenarios_loader import load_core_scenarios
 
 
 class FIOTestRunner:
     """FIO测试执行器"""
     
-    def __init__(self, test_dir: str, logger: Logger, runtime: int = 3):
+    def __init__(self, test_dir: str, logger: Logger, runtime: int = 3, core_file: str = "config/core_scenarios.yaml"):
         self.test_dir = test_dir
         self.logger = logger
         self.runtime = runtime  # 测试运行时间（秒）
+        self.core_file = core_file
         
         # 测试配置矩阵
         self.block_sizes = ["4k", "8k", "16k", "32k", "64k", "128k", "1m", "4m"]
@@ -42,6 +44,11 @@ class FIOTestRunner:
         self.total_scenarios = len(self.block_sizes) * len(self.queue_depths) * 2 * len(self.rwmix_ratios)
         
         self.logger.info(f"FIO测试配置: {len(self.block_sizes)}种块大小 × {len(self.queue_depths)}种队列深度 × 2种并发 × {len(self.rwmix_ratios)}种读写比例 = {self.total_scenarios}种场景")
+        try:
+            self.core_scenarios = load_core_scenarios(self.core_file).get("fio", [])
+        except Exception as e:
+            self.core_scenarios = []
+            self.logger.warning(f"加载核心场景失败: {str(e)}")
     
     def run_comprehensive_fio_tests(self) -> List[TestResult]:
         """运行完整的FIO测试套件（420种场景）"""
@@ -101,6 +108,31 @@ class FIOTestRunner:
         self.logger.info(f"成功测试: {len(successful_tests)}/{len(all_results)}")
         
         return all_results
+
+    def _run_core_scenarios(self) -> List[TestResult]:
+        results: List[TestResult] = []
+        for sc in self.core_scenarios:
+            try:
+                rw = str(sc.get("rw", "randread")).lower()
+                bs = str(sc.get("bs", "4k")).lower()
+                iodepth = int(sc.get("iodepth", 1))
+                numjobs = int(sc.get("numjobs", 1))
+                rwmix_read = int(sc.get("rwmixread", 50)) if rw == "randrw" else 0
+                name = sc.get("name", f"CORE-{rw}-{bs}-qd{iodepth}-j{numjobs}")
+                self.logger.info(f"[CORE] 执行FIO: {name}, bs={bs}, qd={iodepth}, nj={numjobs}")
+                res = self._run_fio_test(
+                    test_type=rw,
+                    block_size=bs,
+                    queue_depth=iodepth,
+                    numjobs=numjobs,
+                    rwmix_read=rwmix_read,
+                    runtime=self.runtime
+                )
+                res.test_name = f"CORE {res.test_name}"
+                results.append(res)
+            except Exception as e:
+                self.logger.error(f"[CORE] 执行核心场景失败: {str(e)}")
+        return results
     
     def run_quick_fio_tests(self) -> List[TestResult]:
         """运行快速FIO测试（代表性场景）"""

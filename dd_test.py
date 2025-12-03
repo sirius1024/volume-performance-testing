@@ -11,18 +11,25 @@ import time
 from typing import List
 
 from common import TestResult, Logger, clear_system_cache
+from core_scenarios_loader import load_core_scenarios
 
 
 class DDTestRunner:
     """DD测试执行器"""
     
-    def __init__(self, test_dir: str, logger: Logger):
+    def __init__(self, test_dir: str, logger: Logger, core_file: str = "config/core_scenarios.yaml"):
         self.test_dir = test_dir
         self.logger = logger
+        try:
+            self.core_scenarios = load_core_scenarios(core_file).get("dd", [])
+        except Exception as e:
+            self.core_scenarios = []
+            self.logger.warning(f"加载核心场景失败: {str(e)}")
     
     def run_all_dd_tests(self) -> List[TestResult]:
         """运行所有DD测试"""
         all_results = []
+        all_results.extend(self.run_core_dd_scenarios())
         
         self.logger.info("开始运行DD测试套件")
         
@@ -149,6 +156,7 @@ class DDTestRunner:
     def run_quick_dd_tests(self) -> List[TestResult]:
         """运行快速DD测试（用于验证和调试）"""
         results = []
+        results.extend(self.run_core_dd_scenarios())
         
         self.logger.info("运行快速DD测试")
         
@@ -210,6 +218,37 @@ class DDTestRunner:
             results.append(result)
         
         self.logger.info(f"快速DD测试完成，共执行 {len(results)} 个测试")
+        return results
+
+    def run_core_dd_scenarios(self) -> List[TestResult]:
+        results: List[TestResult] = []
+        for sc in self.core_scenarios:
+            try:
+                name = sc.get("name", "CORE-DD")
+                t = str(sc.get("type", "write")).lower()
+                bs = str(sc.get("bs", "1M")).upper()
+                count = int(sc.get("count", 1024))
+                oflag = sc.get("oflag", "direct")
+                iflag = sc.get("iflag", "direct")
+                input_file = sc.get("input_file", "")
+                self.logger.info(f"[CORE] 执行DD: {name}, type={t}, bs={bs}")
+                if t == "write":
+                    test_file = f"core_dd_{bs.lower()}_{oflag.replace(',', '_')}"
+                    cmd = [
+                        "dd", "if=/dev/zero", f"of={test_file}", f"bs={bs}", f"count={count}", f"oflag={oflag}"
+                    ]
+                    res = self._run_dd_command(cmd, f"core_write_{oflag}", bs, f"{count}*{bs}")
+                else:
+                    if not input_file:
+                        input_file = f"core_dd_{bs.lower()}_{oflag.replace(',', '_')}"
+                    cmd = [
+                        "dd", f"if={input_file}", "of=/dev/null", f"bs={bs}", f"count={count}", f"iflag={iflag}"
+                    ]
+                    res = self._run_dd_command(cmd, "core_read", bs, f"{count}*{bs}")
+                res.test_name = f"CORE {res.test_name}"
+                results.append(res)
+            except Exception as e:
+                self.logger.error(f"[CORE] 执行核心DD场景失败: {str(e)}")
         return results
     
     def _run_dd_command(self, command: List[str], test_type: str, block_size: str, file_size: str) -> TestResult:

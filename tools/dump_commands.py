@@ -10,6 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from fio_test import FIOTestRunner
 from dd_test import DDTestRunner
 from common import Logger, ensure_directory
+from core_scenarios_loader import load_core_scenarios
 
 
 def build_fio_commands(test_dir: str, runtime: int) -> List[str]:
@@ -128,6 +129,7 @@ def main():
 
     fio_cmds = build_fio_commands(test_dir, runtime=3)
     dd_cmds = build_dd_commands(test_dir)
+    core = load_core_scenarios("config/core_scenarios.yaml")
 
     with open(out_path, "w", encoding="utf-8") as f:
         f.write("# 全量测试命令清单\n\n")
@@ -141,6 +143,19 @@ def main():
         f.write("\n## DD 命令\n\n")
         for i, cmd in enumerate(dd_cmds, 1):
             f.write(f"{i}. `{cmd}`\n")
+
+        fio_core = core.get("fio", [])
+        dd_core = core.get("dd", [])
+        if fio_core or dd_core:
+            f.write("\n## CORE 场景（YAML）\n\n")
+            if fio_core:
+                f.write("### FIO CORE\n\n")
+                for sc in fio_core:
+                    f.write(f"- {sc.get('name','CORE')} rw={sc.get('rw')} bs={sc.get('bs')} qd={sc.get('iodepth')} nj={sc.get('numjobs')} size={sc.get('size','10G')}\n")
+            if dd_core:
+                f.write("\n### DD CORE\n\n")
+                for sc in dd_core:
+                    f.write(f"- {sc.get('name','CORE-DD')} type={sc.get('type')} bs={sc.get('bs')} count={sc.get('count')} flags={sc.get('oflag','') or sc.get('iflag','')}\n")
 
     print(out_path)
 
