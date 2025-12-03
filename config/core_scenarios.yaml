@@ -1,0 +1,358 @@
+version: 1
+description: 核心业务场景（FIO），用于快速/全量测试附加执行
+default_runtime_scope: both
+fio:
+  - name: RWR-4K-L-LAT
+    rw: randwrite
+    bs: 4k
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: RWR-4K-H-IOPS
+    rw: randwrite
+    bs: 4k
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: RWR-8K-L-LAT
+    rw: randwrite
+    bs: 8k
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: RWR-8K-H-IOPS
+    rw: randwrite
+    bs: 8k
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: RWR-16K-L-LAT
+    rw: randwrite
+    bs: 16k
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: RWR-16K-H-IOPS
+    rw: randwrite
+    bs: 16k
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: RWR-64K-L-LAT
+    rw: randwrite
+    bs: 64k
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: RWR-128K-L-LAT
+    rw: randwrite
+    bs: 128k
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: RWR-128K-H-IOPS
+    rw: randwrite
+    bs: 128k
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: SWR-8K-L-BW
+    rw: write
+    bs: 8k
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: SWR-8K-H-BW
+    rw: write
+    bs: 8k
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: SWR-16K-L-BW
+    rw: write
+    bs: 16k
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: SWR-16K-H-BW
+    rw: write
+    bs: 16k
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: SWR-64K-L-BW
+    rw: write
+    bs: 64k
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: SWR-64K-H-BW
+    rw: write
+    bs: 64k
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: SWR-128K-L-BW
+    rw: write
+    bs: 128k
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: SWR-128K-H-BW
+    rw: write
+    bs: 128k
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: SWR-1M-L-BW
+    rw: write
+    bs: 1m
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: SWR-1M-H-BW
+    rw: write
+    bs: 1m
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: RRD-4K-L-LAT
+    rw: randread
+    bs: 4k
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: RRD-4K-H-IOPS
+    rw: randread
+    bs: 4k
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: RRD-8K-L-LAT
+    rw: randread
+    bs: 8k
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: RRD-8K-H-IOPS
+    rw: randread
+    bs: 8k
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: RRD-16K-L-LAT
+    rw: randread
+    bs: 16k
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: RRD-16K-H-IOPS
+    rw: randread
+    bs: 16k
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: RRD-64K-L-LAT
+    rw: randread
+    bs: 64k
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: RRD-64K-H-IOPS
+    rw: randread
+    bs: 64k
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: RRD-128K-L-LAT
+    rw: randread
+    bs: 128k
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: RRD-128K-H-IOPS
+    rw: randread
+    bs: 128k
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: SRD-8K-L-BW
+    rw: read
+    bs: 8k
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: SRD-8K-H-BW
+    rw: read
+    bs: 8k
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: SRD-16K-L-BW
+    rw: read
+    bs: 16k
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: SRD-16K-H-BW
+    rw: read
+    bs: 16k
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: SRD-64K-L-BW
+    rw: read
+    bs: 64k
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: SRD-64K-H-BW
+    rw: read
+    bs: 64k
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: SRD-128K-L-BW
+    rw: read
+    bs: 128k
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: SRD-128K-H-BW
+    rw: read
+    bs: 128k
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: SRD-1M-L-BW
+    rw: read
+    bs: 1m
+    iodepth: 1
+    numjobs: 1
+    runtime: 60
+    size: 10G
+  - name: SRD-1M-H-BW
+    rw: read
+    bs: 1m
+    iodepth: 32
+    numjobs: 4
+    runtime: 60
+    size: 10G
+  - name: MIX-4K-L-LAT
+    rw: randrw
+    bs: 4k
+    iodepth: 1
+    numjobs: 1
+    rwmixread: 70
+    runtime: 60
+    size: 10G
+  - name: MIX-4K-H-IOPS
+    rw: randrw
+    bs: 4k
+    iodepth: 32
+    numjobs: 4
+    rwmixread: 70
+    runtime: 60
+    size: 10G
+  - name: MIX-8K-L-LAT
+    rw: randrw
+    bs: 8k
+    iodepth: 1
+    numjobs: 1
+    rwmixread: 70
+    runtime: 60
+    size: 10G
+  - name: MIX-8K-H-IOPS
+    rw: randrw
+    bs: 8k
+    iodepth: 32
+    numjobs: 4
+    rwmixread: 70
+    runtime: 60
+    size: 10G
+  - name: MIX-16K-L-LAT
+    rw: randrw
+    bs: 16k
+    iodepth: 1
+    numjobs: 1
+    rwmixread: 70
+    runtime: 60
+    size: 10G
+  - name: MIX-16K-H-IOPS
+    rw: randrw
+    bs: 16k
+    iodepth: 32
+    numjobs: 4
+    rwmixread: 70
+    runtime: 60
+    size: 10G
+  - name: MIX-64K-L-LAT
+    rw: randrw
+    bs: 64k
+    iodepth: 1
+    numjobs: 1
+    rwmixread: 70
+    runtime: 60
+    size: 10G
+  - name: MIX-64K-H-IOPS
+    rw: randrw
+    bs: 64k
+    iodepth: 32
+    numjobs: 4
+    rwmixread: 70
+    runtime: 60
+    size: 10G
+  - name: MIX-128K-L-LAT
+    rw: randrw
+    bs: 128k
+    iodepth: 1
+    numjobs: 1
+    rwmixread: 70
+    runtime: 60
+    size: 10G
+  - name: MIX-128K-H-IOPS
+    rw: randrw
+    bs: 128k
+    iodepth: 32
+    numjobs: 4
+    rwmixread: 70
+    runtime: 60
+    size: 10G
+dd: []
