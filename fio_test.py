@@ -229,7 +229,7 @@ class FIOTestRunner:
                 cwd=self.test_dir,
                 capture_output=True,
                 text=True,
-                timeout=runtime + 60  # 给额外的超时时间
+                timeout=runtime + 240
             )
             
             end_time = time.time()
