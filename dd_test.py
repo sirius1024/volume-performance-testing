@@ -54,10 +54,7 @@ class DDTestRunner:
             ("1G", "4G", 4),
             ("1M", "1G", 1024),
             ("64K", "1G", 16384),
-            ("32K", "1G", 32768),
-            ("16K", "1G", 65536),
-            ("8K", "1G", 131072),
-            ("4K", "1G", 262144)
+            ("32K", "1G", 32768)
         ]
         
         for block_size, file_size, count in test_configs:
@@ -87,15 +84,9 @@ class DDTestRunner:
             ("1M", "1G", 1024, "direct,dsync"),
             ("64K", "1G", 16384, "direct,dsync"),
             ("32K", "1G", 32768, "direct,dsync"),
-            ("16K", "1G", 65536, "direct,dsync"),
-            ("8K", "1G", 131072, "direct,dsync"),
-            ("4K", "1G", 262144, "direct,dsync"),
             ("1M", "1G", 1024, "dsync"),
             ("64K", "1G", 16384, "dsync"),
-            ("32K", "1G", 32768, "dsync"),
-            ("16K", "1G", 65536, "dsync"),
-            ("8K", "1G", 131072, "dsync"),
-            ("4K", "1G", 262144, "dsync")
+            ("32K", "1G", 32768, "dsync")
         ]
         
         for block_size, file_size, count, oflag in test_configs:
@@ -129,10 +120,7 @@ class DDTestRunner:
             ("1G", "4G", 4, "testfile_write_1g"),
             ("1M", "1G", 1024, "testfile_write_1m"),
             ("64K", "1G", 16384, "testfile_write_64k"),
-            ("32K", "1G", 32768, "testfile_write_32k"),
-            ("16K", "1G", 65536, "testfile_write_16k"),
-            ("8K", "1G", 131072, "testfile_write_8k"),
-            ("4K", "1G", 262144, "testfile_write_4k")
+            ("32K", "1G", 32768, "testfile_write_32k")
         ]
         
         for block_size, file_size, count, input_file in test_configs:

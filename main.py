@@ -216,6 +216,8 @@ class StoragePerformanceTest:
     def __init__(self, test_dir: str, runtime: int = 3):
         self.test_dir = test_dir
         self.runtime = runtime
+        self.run_timestamp = None
+        self.quick_mode = False
         
         # 确保测试目录存在
         if not ensure_directory(test_dir):
@@ -255,7 +257,14 @@ class StoragePerformanceTest:
         
         # 生成详细报告
         if results:
-            detailed_report_file = os.path.join(self.test_dir, "fio_detailed_report.md")
+            ts = self.run_timestamp or time.strftime('%Y%m%d_%H%M%S')
+            reports_dir = os.path.join(self.test_dir, "reports", ts)
+            ensure_directory(reports_dir)
+            name = "fio_detailed_report.md"
+            if self.quick_mode:
+                base, ext = os.path.splitext(name)
+                name = f"{base}-quick{ext}"
+            detailed_report_file = os.path.join(reports_dir, name)
             self.fio_runner.generate_detailed_report(results, detailed_report_file)
             self.logger.info(f"FIO详细报告已生成: {detailed_report_file}")
         
@@ -268,6 +277,8 @@ class StoragePerformanceTest:
         fio_results = []
         
         start_time = time.time()
+        self.run_timestamp = time.strftime('%Y%m%d_%H%M%S')
+        self.quick_mode = quick_mode
         
         try:
             if include_dd:
@@ -289,8 +300,20 @@ class StoragePerformanceTest:
                        output_file: Optional[str] = None):
         """生成测试报告"""
         if output_file is None:
-            timestamp = time.strftime('%Y%m%d_%H%M%S')
-            output_file = os.path.join(self.test_dir, f"storage_performance_report_{timestamp}.md")
+            ts = self.run_timestamp or time.strftime('%Y%m%d_%H%M%S')
+            reports_dir = os.path.join(self.test_dir, "reports", ts)
+            ensure_directory(reports_dir)
+            name = f"storage_performance_report_{ts}.md"
+            if self.quick_mode:
+                base, ext = os.path.splitext(name)
+                name = f"{base}-quick{ext}"
+            output_file = os.path.join(reports_dir, name)
+        else:
+            if self.quick_mode:
+                dirn = os.path.dirname(output_file)
+                base = os.path.basename(output_file)
+                b, e = os.path.splitext(base)
+                output_file = os.path.join(dirn, f"{b}-quick{e}")
         
         # 收集系统信息
         system_info = self.system_collector.collect_system_info()

@@ -236,9 +236,11 @@ volume-performance-testing/
 ├── README.md                 # 项目文档
 ├── LICENSE                   # 开源许可证
 ├── .gitignore               # Git 忽略文件配置
-└── reports/                 # 测试报告目录（运行时创建）
-    ├── performance_test_report.md
-    └── fio_detailed_report.md
+└── test_data/
+    └── reports/
+        └── YYYYMMDD_HHMMSS/
+            ├── storage_performance_report_YYYYMMDD_HHMMSS[ -quick ].md
+            └── fio_detailed_report[ -quick ].md
 ```
 
 ### 核心模块说明
@@ -324,12 +326,12 @@ volume-performance-testing/
 
 ## 🧪 测试配置
 
-### FIO 测试矩阵（490 种配置）
+### FIO 测试矩阵（480 种配置）
 
 #### 测试参数组合
 
-- **块大小**：4K, 8K, 16K, 32K, 64K, 1M, 4M（7种）
-- **队列深度**：1, 2, 4, 8, 16, 32, 128（7种）
+- **块大小**：4K, 8K, 16K, 32K, 64K, 128K, 1M, 4M（8种）
+- **队列深度**：1, 2, 4, 8, 16, 32（6种）
 - **并发数**：根据队列深度智能映射（2种配置/队列深度）
 - **读写比例**：0%, 25%, 50%, 75%, 100% 读（5种）
 
@@ -339,7 +341,7 @@ volume-performance-testing/
 |----------|------------|----------|
 | 1-4 | 1, 4 | 单线程和轻度并发 |
 | 8-16 | 4, 8 | 中等并发负载 |
-| 32-128 | 8, 16, 32 | 高并发负载 |
+| 32     | 4, 8      | 高并发负载 |
 
 #### 测试类型说明
 
@@ -347,19 +349,22 @@ volume-performance-testing/
 - **randwrite**：100% 随机写
 - **randrw**：随机读写混合（25%/50%/75% 读比例）
 
-### DD 测试配置
+### DD 测试配置（已过滤 bs < 32K）
 
-- **顺序写入**：1M, 4K, 1G 块大小
-- **顺序读取**：1M, 4K, 1G 块大小
+- **顺序写入**：1G, 1M, 64K, 32K
+- **顺序读取**：1G, 1M, 64K, 32K
 - **测试文件大小**：1GB
 
 ## 📊 性能报告
 
 ### 报告文件
 
-- `performance_test_report.md`：综合性能报告
-- `fio_detailed_report.md`：FIO 详细测试结果
-- `storage_test.log`：详细执行日志
+- 综合报告与详细报告将归档到 `test_dir/reports/<时间戳>/` 目录：
+  - `storage_performance_report_<YYYYMMDD_HHMMSS>[ -quick ].md`：综合测试报告
+  - `fio_detailed_report[ -quick ].md`：FIO 详细测试结果
+- `storage_test.log`：详细执行日志（位于 `test_dir` 根目录）
+
+> 说明：`test_dir` 为构造测试文件与日志所在目录（默认 `./test_data`）。报告统一保存在其子目录 `reports/<时间戳>/`，便于后续批次比对。
 
 ### 关键性能指标
 

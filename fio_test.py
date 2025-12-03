@@ -24,8 +24,8 @@ class FIOTestRunner:
         self.runtime = runtime  # 测试运行时间（秒）
         
         # 测试配置矩阵
-        self.block_sizes = ["4k", "8k", "16k", "32k", "64k", "1m", "4m"]
-        self.queue_depths = [1, 2, 4, 8, 16, 32, 128]
+        self.block_sizes = ["4k", "8k", "16k", "32k", "64k", "128k", "1m", "4m"]
+        self.queue_depths = [1, 2, 4, 8, 16, 32]
         self.rwmix_ratios = [0, 25, 50, 75, 100]  # 读取百分比
         
         # 队列深度与并发数的对应关系
@@ -35,8 +35,7 @@ class FIOTestRunner:
             4: [1, 4],
             8: [4, 8],
             16: [4, 8],
-            32: [8, 16],
-            128: [16, 32]
+            32: [4, 8]
         }
         
         # 计算总测试场景数
@@ -541,7 +540,14 @@ def main():
                 print(f"... 还有 {len(failed_tests) - 10} 个失败测试")
         
         # 生成详细报告
-        report_file = os.path.join(args.test_dir, "fio_detailed_report.md")
+        ts = time.strftime('%Y%m%d_%H%M%S')
+        reports_dir = os.path.join(args.test_dir, "reports", ts)
+        ensure_directory(reports_dir)
+        name = "fio_detailed_report.md"
+        if args.quick:
+            base, ext = os.path.splitext(name)
+            name = f"{base}-quick{ext}"
+        report_file = os.path.join(reports_dir, name)
         fio_runner.generate_detailed_report(results, report_file)
         print(f"\n详细测试报告已生成: {report_file}")
         print(f"报告包含所有 {len(results)} 个测试场景的详细结果")
