@@ -43,7 +43,7 @@ def build_fio_commands(test_dir: str, runtime: int) -> List[str]:
                         "--ioengine=libaio",
                         "--group_reporting",
                         "--output-format=json",
-                        "--size=1G",
+                        "--size=10G",
                     ]
                     if test_type == "randrw":
                         cmd.append(f"--rwmixread={rwmix_read}")
@@ -134,7 +134,7 @@ def main():
         f.write(f"生成时间: {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
         f.write(f"测试目录 (cwd): {os.path.abspath(test_dir)}\n\n")
 
-        f.write(f"## FIO 命令（{len(fio_cmds)} 条）\n\n")
+        f.write(f"## FIO 命令（{len(fio_cmds)} 条，size=10G）\n\n")
         for i, cmd in enumerate(fio_cmds, 1):
             f.write(f"{i}. `{cmd}`\n")
 

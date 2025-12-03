@@ -179,7 +179,7 @@ class FIOTestRunner:
             "--ioengine=libaio",
             "--group_reporting",
             "--output-format=json",
-            "--size=1G"
+            "--size=10G"
         ]
         
         # 如果是混合读写，添加读写比例参数

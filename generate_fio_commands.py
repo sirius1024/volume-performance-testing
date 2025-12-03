@@ -82,7 +82,7 @@ def generate_fio_commands_table():
                         "--ioengine=libaio",
                         "--group_reporting",
                         "--output-format=json",
-                        "--size=1G"
+                        "--size=10G"
                     ]
                     
                     # 如果是混合读写，添加读写比例参数
@@ -114,7 +114,7 @@ def generate_fio_commands_table():
 - `--ioengine=libaio`: 使用Linux异步I/O引擎
 - `--group_reporting`: 合并多个作业的报告
 - `--output-format=json`: 输出JSON格式结果
-- `--size=1G`: 测试文件大小1GB
+- `--size=10G`: 测试文件大小10GB
 - `--rwmixread=`: 读写混合模式下的读取百分比（仅用于randrw模式）
 
 ## 测试场景分布
