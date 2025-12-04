@@ -216,7 +216,7 @@ class FIOTestRunner:
         )
         
         # 构建FIO命令
-        test_file = f"fio_test_{block_size}_{queue_depth}_{numjobs}_{rwmix_read}"
+        test_file = "fio_test_shared_10G.bin"
         try:
             fp = os.path.join(self.test_dir, test_file)
             if not os.path.exists(fp):
@@ -225,6 +225,8 @@ class FIOTestRunner:
                     f.write(b"\0")
         except Exception:
             pass
+
+        unlink_on_finish = os.environ.get("FIO_UNLINK", "0")
         
         ioengine = "libaio"
         if str(getattr(self, "filesystem", "")).lower() == "9p":
@@ -247,6 +249,9 @@ class FIOTestRunner:
             "--size=10G",
             f"--output={output_file}"
         ]
+
+        if unlink_on_finish == "1":
+            fio_command.append("--unlink=1")
         
         # 如果是混合读写，添加读写比例参数
         if test_type == "randrw":
@@ -433,11 +438,16 @@ class FIOTestRunner:
         try:
             import glob
             test_files = glob.glob(os.path.join(self.test_dir, "fio_test_*"))
+            shared_file = os.path.join(self.test_dir, "fio_test_shared_10G.bin")
             
             for file_path in test_files:
                 if os.path.exists(file_path):
                     os.remove(file_path)
                     self.logger.info(f"已删除FIO测试文件: {os.path.basename(file_path)}")
+
+            if os.path.exists(shared_file):
+                os.remove(shared_file)
+                self.logger.info(f"已删除FIO共享测试文件: {os.path.basename(shared_file)}")
         except Exception as e:
             self.logger.warning(f"清理FIO测试文件时出错: {str(e)}")
     
