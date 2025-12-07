@@ -442,13 +442,6 @@ def main():
             matrix_info = test_runner.fio_runner.get_test_matrix_info()
             print(f"FIO测试场景数: {matrix_info['total_scenarios']}")
             print(f"预计FIO测试耗时: {matrix_info['estimated_total_time_minutes']:.1f}分钟")
-            
-            # 询问用户是否继续
-            if matrix_info['estimated_total_time_minutes'] > 10:
-                response = input("\n测试时间较长，是否继续？(y/N): ")
-                if response.lower() not in ['y', 'yes']:
-                    print("测试已取消")
-                    return 0
         
         # 运行测试
         dd_results, fio_results = test_runner.run_all_tests(include_dd, include_fio, args.quick)
