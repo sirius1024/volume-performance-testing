@@ -1,31 +1,30 @@
 # FIO测试命令详细列表
 
-本文档包含完整的490个FIO测试场景的具体命令。测试矩阵包括：
-- **块大小**: 4k, 8k, 16k, 32k, 64k, 1m, 4m (7种)
-- **队列深度**: 1, 2, 4, 8, 16, 32, 128 (7种)
-- **并发数**: 根据队列深度动态配置 (2种)
+本文档描述当前 FIO 测试矩阵与示例命令（同步实现）：
+- **块大小**: 4k, 8k, 16k, 32k, 64k, 128k, 1m, 4m (8种)
+- **队列深度**: 1, 2, 4, 8, 16, 32 (6种)
+- **并发数**: 按队列深度映射 (2种)
   - iodepth=1,2,4: numjobs=1,4
   - iodepth=8,16: numjobs=4,8
-  - iodepth=32: numjobs=8,16
-  - iodepth=128: numjobs=16,32
-- **读写比例**: 0%(纯写), 25%(25%读75%写), 50%(50%读50%写), 75%(75%读25%写), 100%(纯读) (5种)
+  - iodepth=32: numjobs=4,8
+- **读写比例**: 0%(纯写), 25%, 50%, 75%, 100%(纯读) (5种)
 
-总计: 7 × 7 × 2 × 5 = **490个测试场景**
+总计: 8 × 6 × 2 × 5 = **480 个测试场景**
 
 ## 测试命令表格
 
 | 序号 | 块大小 | 队列深度 | 并发数 | 读写模式 | 读写比例 | 完整FIO命令 |
 |------|--------|----------|--------|----------|----------|-------------|
-| 1 | 4k | 1 | 1 | randwrite | 0% | fio --name=test --filename=fio_test_4k_1_1_0 --rw=randwrite --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G |
+| 1 | 4k | 1 | 1 | randwrite | 0% | fio --name=test --filename=fio_test_4k_1_1_0 --rw=randwrite --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=10G --output=fio_json_4k_1_1_0.json |
 | 2 | 4k | 1 | 1 | randrw | 25% | fio --name=test --filename=fio_test_4k_1_1_25 --rw=randrw --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=25 |
 | 3 | 4k | 1 | 1 | randrw | 50% | fio --name=test --filename=fio_test_4k_1_1_50 --rw=randrw --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=50 |
 | 4 | 4k | 1 | 1 | randrw | 75% | fio --name=test --filename=fio_test_4k_1_1_75 --rw=randrw --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=75 |
-| 5 | 4k | 1 | 1 | randread | 100% | fio --name=test --filename=fio_test_4k_1_1_100 --rw=randread --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G |
-| 6 | 4k | 1 | 4 | randwrite | 0% | fio --name=test --filename=fio_test_4k_1_4_0 --rw=randwrite --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G |
+| 5 | 4k | 1 | 1 | randread | 100% | fio --name=test --filename=fio_test_4k_1_1_100 --rw=randread --bs=4k --iodepth=1 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=10G --output=fio_json_4k_1_1_100.json |
+| 6 | 4k | 1 | 4 | randwrite | 0% | fio --name=test --filename=fio_test_4k_1_4_0 --rw=randwrite --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=10G --output=fio_json_4k_1_4_0.json |
 | 7 | 4k | 1 | 4 | randrw | 25% | fio --name=test --filename=fio_test_4k_1_4_25 --rw=randrw --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=25 |
 | 8 | 4k | 1 | 4 | randrw | 50% | fio --name=test --filename=fio_test_4k_1_4_50 --rw=randrw --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=50 |
 | 9 | 4k | 1 | 4 | randrw | 75% | fio --name=test --filename=fio_test_4k_1_4_75 --rw=randrw --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=75 |
-| 10 | 4k | 1 | 4 | randread | 100% | fio --name=test --filename=fio_test_4k_1_4_100 --rw=randread --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G |
+| 10 | 4k | 1 | 4 | randread | 100% | fio --name=test --filename=fio_test_4k_1_4_100 --rw=randread --bs=4k --iodepth=1 --numjobs=4 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=10G --output=fio_json_4k_1_4_100.json |
 | 11 | 4k | 2 | 1 | randwrite | 0% | fio --name=test --filename=fio_test_4k_2_1_0 --rw=randwrite --bs=4k --iodepth=2 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G |
 | 12 | 4k | 2 | 1 | randrw | 25% | fio --name=test --filename=fio_test_4k_2_1_25 --rw=randrw --bs=4k --iodepth=2 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=25 |
 | 13 | 4k | 2 | 1 | randrw | 50% | fio --name=test --filename=fio_test_4k_2_1_50 --rw=randrw --bs=4k --iodepth=2 --numjobs=1 --runtime=3 --time_based --direct=1 --ioengine=libaio --group_reporting --output-format=json --size=1G --rwmixread=50 |
@@ -525,19 +524,14 @@
 - `--ioengine=libaio`: 使用Linux异步I/O引擎
 - `--group_reporting`: 合并多个作业的报告
 - `--output-format=json`: 输出JSON格式结果
-- `--size=1G`: 测试文件大小1GB
+- `--size=10G`: 测试文件大小10GB；快速模式下会预创建稀疏测试文件以减少首次打开卡顿
+- `--output=<json>`: 为每个场景输出 JSON 文件并解析，提升稳定性
 - `--rwmixread=`: 读写混合模式下的读取百分比（仅用于randrw模式）
 
 ## 测试场景分布
 
 ### 按块大小分组
-- **4k**: 70个测试场景（7种队列深度 × 2种并发 × 5种读写比例）
-- **8k**: 70个测试场景
-- **16k**: 70个测试场景
-- **32k**: 70个测试场景
-- **64k**: 70个测试场景
-- **1m**: 70个测试场景
-- **4m**: 70个测试场景
+- **4k/8k/16k/32k/64k/128k/1m/4m**: 各 60 个测试场景（6种队列深度 × 2种并发 × 5种读写比例）
 
 ### 按读写模式分组
 - **随机写(randwrite)**: 98个测试场景（7种块大小 × 7种队列深度 × 2种并发）
@@ -547,22 +541,16 @@
 - **随机读(randread)**: 98个测试场景
 
 ### 按队列深度分组
-- **QD=1**: 70个测试场景（7种块大小 × 2种并发 × 5种读写比例）
-- **QD=2**: 70个测试场景
-- **QD=4**: 70个测试场景
-- **QD=8**: 70个测试场景
-- **QD=16**: 70个测试场景
-- **QD=32**: 70个测试场景
-- **QD=128**: 70个测试场景
+- **QD=1/2/4/8/16/32**: 各 80 个测试场景（8种块大小 × 2种并发 × 5种读写比例）
 
 ### 按并发数分组
-- **低并发(numjobs=1,4)**: 210个测试场景（iodepth=1,2,4时）
-- **中并发(numjobs=4,8)**: 140个测试场景（iodepth=8,16时）
-- **高并发(numjobs=8,16,32)**: 140个测试场景（iodepth=32,128时）
+- **低并发(numjobs=1,4)**: 240 个（qd=1/2/4）
+- **中并发(numjobs=4,8)**: 160 个（qd=8/16）
+- **高并发(numjobs=4,8)**: 80 个（qd=32）
 
 ## 性能测试目标
 
-这490个测试场景旨在全面评估存储系统在不同工作负载下的性能特征：
+这480个测试场景旨在全面评估存储系统在不同工作负载下的性能特征：
 
 1. **IOPS性能**: 通过小块大小（4k-64k）测试随机I/O性能
 2. **吞吐量性能**: 通过大块大小（1m）测试顺序I/O性能

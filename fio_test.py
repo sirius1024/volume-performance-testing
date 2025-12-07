@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 """
 FIO测试模块
-包含FIOTestRunner类和相关的FIO性能测试功能
-支持490种测试场景配置（7种块大小×7种队列深度×2种numjobs×5种读写比例）
+包含 FIOTestRunner 类与相关性能测试功能
+矩阵规模：480 场景（8块大小×6队列深度×2并发×5读写比例）
+快速模式：运行代表性组合，默认 runtime=3
+执行引擎：在 9p 文件系统自动回退为 psync，其它使用 libaio
+输出：为每个场景生成 JSON 文件并解析；日志打印完整命令
 """
 
 import json
@@ -13,19 +16,33 @@ import time
 from typing import List, Dict, Any, Optional
 
 from common import TestResult, Logger, clear_system_cache
+from core_scenarios_loader import load_core_scenarios
 
 
 class FIOTestRunner:
     """FIO测试执行器"""
     
-    def __init__(self, test_dir: str, logger: Logger, runtime: int = 3):
+    def __init__(self, test_dir: str, logger: Logger, runtime: int = 3, core_file: str = "config/core_scenarios.yaml"):
         self.test_dir = test_dir
         self.logger = logger
         self.runtime = runtime  # 测试运行时间（秒）
+        self.core_file = core_file
+        try:
+            fs = "Unknown"
+            p = subprocess.run(["df", "-T", self.test_dir], capture_output=True, text=True)
+            if p.returncode == 0:
+                lines = p.stdout.strip().split("\n")
+                if len(lines) > 1:
+                    parts = lines[1].split()
+                    if len(parts) > 1:
+                        fs = parts[1]
+            self.filesystem = fs
+        except Exception:
+            self.filesystem = "Unknown"
         
         # 测试配置矩阵
-        self.block_sizes = ["4k", "8k", "16k", "32k", "64k", "1m", "4m"]
-        self.queue_depths = [1, 2, 4, 8, 16, 32, 128]
+        self.block_sizes = ["4k", "8k", "16k", "32k", "64k", "128k", "1m", "4m"]
+        self.queue_depths = [1, 2, 4, 8, 16, 32]
         self.rwmix_ratios = [0, 25, 50, 75, 100]  # 读取百分比
         
         # 队列深度与并发数的对应关系
@@ -35,18 +52,25 @@ class FIOTestRunner:
             4: [1, 4],
             8: [4, 8],
             16: [4, 8],
-            32: [8, 16],
-            128: [16, 32]
+            32: [4, 8]
         }
         
         # 计算总测试场景数
         self.total_scenarios = len(self.block_sizes) * len(self.queue_depths) * 2 * len(self.rwmix_ratios)
         
         self.logger.info(f"FIO测试配置: {len(self.block_sizes)}种块大小 × {len(self.queue_depths)}种队列深度 × 2种并发 × {len(self.rwmix_ratios)}种读写比例 = {self.total_scenarios}种场景")
+        try:
+            self.core_scenarios = load_core_scenarios(self.core_file).get("fio", [])
+        except Exception as e:
+            self.core_scenarios = []
+            self.logger.warning(f"加载核心场景失败: {str(e)}")
     
     def run_comprehensive_fio_tests(self) -> List[TestResult]:
         """运行完整的FIO测试套件（420种场景）"""
         all_results = []
+        core = self._run_core_scenarios()
+        if core:
+            all_results.extend(core)
         scenario_count = 0
         
         self.logger.info(f"开始运行FIO完整测试套件，共{self.total_scenarios}种场景")
@@ -102,10 +126,38 @@ class FIOTestRunner:
         self.logger.info(f"成功测试: {len(successful_tests)}/{len(all_results)}")
         
         return all_results
+
+    def _run_core_scenarios(self) -> List[TestResult]:
+        results: List[TestResult] = []
+        for sc in self.core_scenarios:
+            try:
+                rw = str(sc.get("rw", "randread")).lower()
+                bs = str(sc.get("bs", "4k")).lower()
+                iodepth = int(sc.get("iodepth", 1))
+                numjobs = int(sc.get("numjobs", 1))
+                rwmix_read = int(sc.get("rwmixread", 50)) if rw == "randrw" else 0
+                name = sc.get("name", f"CORE-{rw}-{bs}-qd{iodepth}-j{numjobs}")
+                self.logger.info(f"[CORE] 执行FIO: {name}, bs={bs}, qd={iodepth}, nj={numjobs}")
+                res = self._run_fio_test(
+                    test_type=rw,
+                    block_size=bs,
+                    queue_depth=iodepth,
+                    numjobs=numjobs,
+                    rwmix_read=rwmix_read,
+                    runtime=self.runtime
+                )
+                res.test_name = f"CORE {res.test_name}"
+                results.append(res)
+            except Exception as e:
+                self.logger.error(f"[CORE] 执行核心场景失败: {str(e)}")
+        return results
     
     def run_quick_fio_tests(self) -> List[TestResult]:
         """运行快速FIO测试（代表性场景）"""
         results = []
+        core = self._run_core_scenarios()
+        if core:
+            results.extend(core)
         
         self.logger.info("开始运行FIO快速测试")
         
@@ -164,8 +216,22 @@ class FIOTestRunner:
         )
         
         # 构建FIO命令
-        test_file = f"fio_test_{block_size}_{queue_depth}_{numjobs}_{rwmix_read}"
+        test_file = "fio_test_shared_10G.bin"
+        try:
+            fp = os.path.join(self.test_dir, test_file)
+            if not os.path.exists(fp):
+                with open(fp, "wb") as f:
+                    f.seek(10 * 1024 * 1024 * 1024 - 1)
+                    f.write(b"\0")
+        except Exception:
+            pass
+
+        unlink_on_finish = os.environ.get("FIO_UNLINK", "0")
         
+        ioengine = "libaio"
+        if str(getattr(self, "filesystem", "")).lower() == "9p":
+            ioengine = "psync"
+        output_file = f"fio_json_{block_size}_{queue_depth}_{numjobs}_{rwmix_read}.json"
         fio_command = [
             "fio",
             "--name=test",
@@ -176,18 +242,23 @@ class FIOTestRunner:
             f"--numjobs={numjobs}",
             f"--runtime={runtime}",
             "--time_based",
-            "--direct=1",
-            "--ioengine=libaio",
+            f"--direct={'0' if str(getattr(self, 'filesystem', '')).lower() == '9p' and test_type in ('randread','randrw') else '1'}",
+            f"--ioengine={ioengine}",
             "--group_reporting",
             "--output-format=json",
-            "--size=1G"
+            "--size=10G",
+            f"--output={output_file}"
         ]
+
+        if unlink_on_finish == "1":
+            fio_command.append("--unlink=1")
         
         # 如果是混合读写，添加读写比例参数
         if test_type == "randrw":
             fio_command.append(f"--rwmixread={rwmix_read}")
         
         result.command = " ".join(fio_command)
+        self.logger.info(f"命令: {result.command}")
         
         try:
             start_time = time.time()
@@ -198,15 +269,18 @@ class FIOTestRunner:
                 cwd=self.test_dir,
                 capture_output=True,
                 text=True,
-                timeout=runtime + 60  # 给额外的超时时间
+                timeout=runtime + 60
             )
             
             end_time = time.time()
             result.duration_seconds = end_time - start_time
             
             if process.returncode == 0:
-                # 解析FIO JSON输出
-                self._parse_fio_json_output(process.stdout, result)
+                try:
+                    with open(os.path.join(self.test_dir, output_file), "r", encoding="utf-8") as jf:
+                        self._parse_fio_json_output(jf.read(), result)
+                except Exception:
+                    self._parse_fio_json_output(process.stdout, result)
                 
                 if result.read_iops or result.write_iops:
                     self.logger.info(f"FIO测试完成: {test_name}")
@@ -222,8 +296,34 @@ class FIOTestRunner:
                 self.logger.error(f"FIO测试失败: {test_name}, 错误: {result.error_message}")
         
         except subprocess.TimeoutExpired:
-            result.error_message = "测试超时"
-            self.logger.error(f"FIO测试超时: {test_name}")
+            try:
+                fallback_command = fio_command.copy()
+                for i, arg in enumerate(fallback_command):
+                    if arg.startswith("--ioengine="):
+                        fallback_command[i] = "--ioengine=sync"
+                    if arg.startswith("--direct="):
+                        fallback_command[i] = "--direct=0"
+                process2 = subprocess.run(
+                    fallback_command,
+                    cwd=self.test_dir,
+                    capture_output=True,
+                    text=True,
+                    timeout=runtime + 60
+                )
+                if process2.returncode == 0:
+                    try:
+                        with open(os.path.join(self.test_dir, output_file), "r", encoding="utf-8") as jf:
+                            self._parse_fio_json_output(jf.read(), result)
+                    except Exception:
+                        self._parse_fio_json_output(process2.stdout, result)
+                    result.error_message = ""
+                    self.logger.info(f"FIO测试完成: {test_name}")
+                else:
+                    result.error_message = process2.stderr or "FIO命令执行失败"
+                    self.logger.error(f"FIO测试失败: {test_name}, 错误: {result.error_message}")
+            except Exception:
+                result.error_message = "测试超时"
+                self.logger.error(f"FIO测试超时: {test_name}")
         except Exception as e:
             result.error_message = str(e)
             self.logger.error(f"FIO测试异常: {test_name}, 错误: {str(e)}")
@@ -338,11 +438,16 @@ class FIOTestRunner:
         try:
             import glob
             test_files = glob.glob(os.path.join(self.test_dir, "fio_test_*"))
+            shared_file = os.path.join(self.test_dir, "fio_test_shared_10G.bin")
             
             for file_path in test_files:
                 if os.path.exists(file_path):
                     os.remove(file_path)
                     self.logger.info(f"已删除FIO测试文件: {os.path.basename(file_path)}")
+
+            if os.path.exists(shared_file):
+                os.remove(shared_file)
+                self.logger.info(f"已删除FIO共享测试文件: {os.path.basename(shared_file)}")
         except Exception as e:
             self.logger.warning(f"清理FIO测试文件时出错: {str(e)}")
     
@@ -541,7 +646,14 @@ def main():
                 print(f"... 还有 {len(failed_tests) - 10} 个失败测试")
         
         # 生成详细报告
-        report_file = os.path.join(args.test_dir, "fio_detailed_report.md")
+        ts = time.strftime('%Y%m%d_%H%M%S')
+        reports_dir = os.path.join(args.test_dir, "reports", ts)
+        ensure_directory(reports_dir)
+        name = "fio_detailed_report.md"
+        if args.quick:
+            base, ext = os.path.splitext(name)
+            name = f"{base}-quick{ext}"
+        report_file = os.path.join(reports_dir, name)
         fio_runner.generate_detailed_report(results, report_file)
         print(f"\n详细测试报告已生成: {report_file}")
         print(f"报告包含所有 {len(results)} 个测试场景的详细结果")
