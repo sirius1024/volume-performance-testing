@@ -1,10 +1,11 @@
 {
   "p": 3,
-  "start_time_utc": "2025-12-09 10:05",
+  "start_time_utc": "2025-12-09 08:11",
   "remote_workdir": "/data/volume-performance-testing",
+  "sudo" : true,
   "vms": [
-    { "host": "10.0.0.11", "user": "vmuser", "auth": { "type": "key", "value": "~/.ssh/id_rsa" } },
-    { "host": "10.0.0.12", "user": "vmuser", "auth": { "type": "password", "value": "PASSWORD" } },
-    { "host": "10.0.0.13", "user": "vmuser", "auth": { "type": "key", "value": "~/.ssh/id_rsa" } }
+    { "host": "118.195.246.72", "user": "ubuntu", "auth": { "type": "password", "value": "Action001" } },
+    { "host": "1.13.181.26", "user": "ubuntu", "auth": { "type": "password", "value": "Action001" } },
+    { "host": "43.137.1.99", "user": "ubuntu", "auth": { "type": "password", "value": "Action001" } }
   ]
 }

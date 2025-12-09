@@ -23,6 +23,38 @@
 }
 ```
 
+## 一.1 环境与依赖（被测虚拟机）
+- 必备软件：
+  - `python3`（可运行本项目脚本）
+  - `fio`（用于 FIO 测试）
+  - `coreutils`（包含 `dd`）
+  - `openssh-server`（确保可被控制端 SSH 登录）
+- 可选/建议：
+  - 时间同步（NTP/chrony），确保 UTC 时间一致
+  - 具备写入 `/proc/sys/vm/drop_caches` 的权限以执行读取前清缓存（非必需，缺权限时程序自动跳过）
+- 安装示例：
+  - Debian/Ubuntu：
+    - `sudo apt update && sudo apt install -y python3 fio coreutils openssh-server`
+  - CentOS/RHEL/AlmaLinux：
+    - `sudo yum install -y python3 fio coreutils openssh-server`
+    - 或 `sudo dnf install -y python3 fio coreutils openssh-server`
+- 代码与目录：
+  - 将本项目代码部署到 `remote_workdir`（默认 `/data/volume-performance-testing`）
+  - 远端以该目录为工作目录运行 `python3 main.py <参数>`
+
+## 一.2 环境与依赖（控制端）
+- 必备软件：
+  - `python3`
+  - `openssh-client`
+- 可选（仅当使用密码登录时需要）：
+  - `sshpass`
+- 安装示例：
+  - Debian/Ubuntu：
+    - `sudo apt update && sudo apt install -y python3 openssh-client sshpass`
+  - CentOS/RHEL/AlmaLinux：
+    - `sudo yum install -y python3 openssh-clients sshpass`
+    - 或 `sudo dnf install -y python3 openssh-clients sshpass`
+
 ## 二、定时同时启动（3pNv）
 在控制端执行一次下发：
 ```
