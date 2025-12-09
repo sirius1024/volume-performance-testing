@@ -8,6 +8,8 @@
   - `start_time_utc`: 统一启动时间（UTC，分钟级，例如 `2025-12-09 10:05`）
   - `remote_workdir`: 远端代码目录（默认 `/data/volume-performance-testing`）
   - `vms`: 虚拟机列表（每行一个 `host/user/auth`，`auth.type` 为 `key` 或 `password`）
+  - `sudo`: 是否以 `sudo -E` 运行（可在全局或单机覆盖）
+  - 安全：`config/cluster.json` 含敏感信息，已在 `.gitignore` 忽略；请勿提交到 Git。可提供 `config/cluster.example.json` 作为示例模板。
 
 示例：
 ```json
@@ -15,6 +17,7 @@
   "p": 3,
   "start_time_utc": "2025-12-09 10:05",
   "remote_workdir": "/data/volume-performance-testing",
+  "sudo": true,
   "vms": [
     { "host": "10.0.0.11", "user": "vmuser", "auth": { "type": "key", "value": "~/.ssh/id_rsa" } },
     { "host": "10.0.0.12", "user": "vmuser", "auth": { "type": "password", "value": "PASSWORD" } },
@@ -60,11 +63,21 @@
 ```
 python3 tools/dispatch.py --config config/cluster.json --args "<你的 main.py 参数>"
 ```
-- 远端会在 `start_time_utc` 到点后执行：`python3 main.py <你的参数>`
+- 远端以后台方式运行，等待到 `start_time_utc` 到点后执行：`python3 -u main.py <你的参数>`，并将输出追加到 `test_data/reports/<STAMP>/run.log`；错误与启动信息汇总到 `/tmp/volume-test-error.log`
 - 每台虚拟机会在 `test_data/reports/<YYYYMMDD-HHMM>/` 生成：
   - Markdown 主报告：`storage_performance_report_<STAMP>.md`（或 `-quick.md`）
   - JSON 数据：`report.json`
+  - 运行日志：`run.log`
 - 说明：`<STAMP>` 即分钟级目录名（UTC），如 `20251209-1005`
+
+### 二.1 立即执行技巧
+- 如需立即执行，可将 `start_time_utc` 设置为当前或过去的 UTC 分钟；调度会跳过等待直接启动。
+
+### 二.2 远端快速验证
+``` 
+python3 tools/verify.py --config config/cluster.json
+```
+- 自动检查远端 `remote_workdir`、`python3` 与 `fio` 是否可用、`sudo` 免密状态、分钟目录写入与 `run.log` 内容，以及 `main.py` 进程存在性。
 
 ## 三、归集与合并
 1）归集（自动用 `start_time_utc` 推导目录）
@@ -108,6 +121,7 @@ python3 tools/compare.py --baseline 20251201-1005 --current 20251209-1005
 - 时间统一为 UTC 的分钟级目录名；无需 `run_id`
 - 密码登录仅在不得已时使用，优先免密 `key`
 - 失败虚拟机不会阻塞聚合，对应 IP 会在合并元信息中缺失或在归集日志中提示
+- `config/cluster.json` 包含敏感信息，已在 `.gitignore` 忽略；如需协作，请提交不含敏感字段的 `config/cluster.example.json` 示例。
 
 ## 六、快速自检
 - 在本地运行单机快速测试：
