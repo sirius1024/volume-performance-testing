@@ -5,7 +5,8 @@ FIO测试模块
 包含 FIOTestRunner 类与相关性能测试功能
 矩阵规模：480 场景（8块大小×6队列深度×2并发×5读写比例）
 快速模式：运行代表性组合，默认 runtime=3
-执行引擎：在 9p 文件系统自动回退为 psync，其它使用 libaio
+执行引擎与兼容性：在 9p 文件系统自动回退为 psync，且 randread/randrw 场景使用 --direct=0；其他文件系统使用 libaio 并 --direct=1
+超时保护：命令运行超时为 runtime + 60 秒
 输出：为每个场景生成 JSON 文件并解析；日志打印完整命令
 """
 

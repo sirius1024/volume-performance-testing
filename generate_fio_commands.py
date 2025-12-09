@@ -2,6 +2,10 @@
 # -*- coding: utf-8 -*-
 """
 生成完整的480个FIO测试命令表格
+
+说明：本文件生成的是基线示例命令（统一 --size=10G，ioengine=libaio，--direct=1）。
+实际执行时以 FIOTestRunner 为准，会根据文件系统（如 9p）自动回退
+ioengine=psync，并在 randread/randrw 场景下使用 --direct=0。
 """
 
 def generate_fio_commands_table():

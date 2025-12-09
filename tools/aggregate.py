@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import json
+import time
 from typing import Dict, List
 
 import json as _json
@@ -89,9 +90,32 @@ def main():
     out = {'meta': meta, 'cases': agg['cases']}
 
     os.makedirs(centralized, exist_ok=True)
-    with open(os.path.join(centralized, 'aggregate.json'), 'w', encoding='utf-8') as f:
+    json_path = os.path.join(centralized, 'aggregate.json')
+    with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(out, f, ensure_ascii=False, indent=2)
-    print(os.path.join(centralized, 'aggregate.json'))
+    md_path = os.path.join(centralized, 'aggregate.md')
+    lines = []
+    lines.append('# 聚合存储性能报告\n')
+    lines.append(f'生成时间: {time.strftime("%Y-%m-%d %H:%M:%S")}\n')
+    lines.append('## 元信息\n')
+    lines.append(f"- 物理机数(p): {out['meta']['p']}\n")
+    lines.append(f"- 虚拟机数: {out['meta']['vm_count']}\n")
+    lines.append(f"- 时间戳: {out['meta']['timestamp']}\n")
+    lines.append(f"- 来源: {', '.join(out['meta']['sources'])}\n\n")
+    lines.append('## 聚合案例\n\n')
+    lines.append('| 名称 | 读IOPS | 写IOPS | 读MB/s | 写MB/s | 读延迟(μs) | 写延迟(μs) |\n')
+    lines.append('|------|--------|--------|--------|--------|-------------|-------------|\n')
+    for c in out['cases']:
+        lines.append(
+            f"| {c['name']} | "
+            f"{c['read']['iops']:.0f} | {c['write']['iops']:.0f} | "
+            f"{c['read']['bw_MBps']:.2f} | {c['write']['bw_MBps']:.2f} | "
+            f"{c['read']['lat_us']:.1f} | {c['write']['lat_us']:.1f} |\n"
+        )
+    with open(md_path, 'w', encoding='utf-8') as f:
+        f.writelines(lines)
+    print(json_path)
+    print(md_path)
 
 
 if __name__ == '__main__':

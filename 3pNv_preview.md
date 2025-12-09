@@ -1,17 +1,14 @@
-# 3pNv 使用预览
+# 3pNv 快速上手（面向用户）
 
-本预览说明如何在 3 台物理机（p=3）上，使用 N 台虚拟机（v=N）并行执行存储性能测试，并在本地集中归集、合并与对比报告。保持与单机一致的执行习惯：远端仅运行 `python3 main.py <你的参数>`，不引入额外路径与工具。
+面向需要“一次下发、三机并行、集中出报告”的用户说明。目标：在 3 台物理机（p=3）上的 N 台虚拟机（v=N）同时运行 `python3 main.py <参数>`，并在控制端自动归集与聚合，拿到 Markdown 与 JSON 报告。
 
-## 一、准备配置
-- 编辑 `config/cluster.json`
-  - `p`: 物理机数量（人工填写，如 3）
-  - `start_time_utc`: 统一启动时间（UTC，分钟级，例如 `2025-12-09 10:05`）
-  - `remote_workdir`: 远端代码目录（默认 `/data/volume-performance-testing`）
-  - `vms`: 虚拟机列表（每行一个 `host/user/auth`，`auth.type` 为 `key` 或 `password`）
-  - `sudo`: 是否以 `sudo -E` 运行（可在全局或单机覆盖）
-  - 安全：`config/cluster.json` 含敏感信息，已在 `.gitignore` 忽略；请勿提交到 Git。可提供 `config/cluster.example.json` 作为示例模板。
+## 你需要准备什么
+- 在每台虚拟机（被测端）：安装 `python3`、`fio`、`coreutils`、`openssh-server`，并把本项目代码放到 `remote_workdir`（默认 `/data/volume-performance-testing`）。
+- 在控制端（你现在所在机器）：安装 `python3`、`openssh-client`；若用密码认证，再安装 `sshpass`。
+- 时间建议统一到 UTC 分钟级（NTP/chrony 非必需，但推荐）。
 
-示例：
+## 配置集群（1 分钟）
+编辑 `config/cluster.json`，填入你的环境信息（不要提交真实凭据到 Git）：
 ```json
 {
   "p": 3,
@@ -19,115 +16,105 @@
   "remote_workdir": "/data/volume-performance-testing",
   "sudo": true,
   "vms": [
-    { "host": "10.0.0.11", "user": "vmuser", "auth": { "type": "key", "value": "~/.ssh/id_rsa" } },
-    { "host": "10.0.0.12", "user": "vmuser", "auth": { "type": "password", "value": "PASSWORD" } },
-    { "host": "10.0.0.13", "user": "vmuser", "auth": { "type": "key", "value": "~/.ssh/id_rsa" } }
+    { "host": "10.0.0.11", "user": "ubuntu", "auth": { "type": "key", "value": "~/.ssh/id_rsa" } },
+    { "host": "10.0.0.12", "user": "ubuntu", "auth": { "type": "password", "value": "PASSWORD" } },
+    { "host": "10.0.0.13", "user": "ubuntu", "auth": { "type": "key", "value": "~/.ssh/id_rsa" } }
   ]
 }
 ```
+字段说明：
+- `p`：物理机数量，仅用于聚合元信息显示。
+- `start_time_utc`：统一启动时间（UTC，分钟级）；设为“当前或过去的分钟”可直接立即执行。
+- `remote_workdir`：远端代码目录（每台 VM 需要已部署此项目）。
+- `sudo`：是否用 `sudo -E` 运行；可在单机覆盖该字段。
+- `vms`：虚拟机列表，每项给出 `host/user/auth`；`auth.type` 为 `key` 或 `password`。
 
-## 一.1 环境与依赖（被测虚拟机）
-- 必备软件：
-  - `python3`（可运行本项目脚本）
-  - `fio`（用于 FIO 测试）
-  - `coreutils`（包含 `dd`）
-  - `openssh-server`（确保可被控制端 SSH 登录）
-- 可选/建议：
-  - 时间同步（NTP/chrony），确保 UTC 时间一致
-  - 具备写入 `/proc/sys/vm/drop_caches` 的权限以执行读取前清缓存（非必需，缺权限时程序自动跳过）
-- 安装示例：
-  - Debian/Ubuntu：
-    - `sudo apt update && sudo apt install -y python3 fio coreutils openssh-server`
-  - CentOS/RHEL/AlmaLinux：
-    - `sudo yum install -y python3 fio coreutils openssh-server`
-    - 或 `sudo dnf install -y python3 fio coreutils openssh-server`
-- 代码与目录：
-  - 将本项目代码部署到 `remote_workdir`（默认 `/data/volume-performance-testing`）
-  - 远端以该目录为工作目录运行 `python3 main.py <参数>`
-
-## 一.2 环境与依赖（控制端）
-- 必备软件：
-  - `python3`
-  - `openssh-client`
-- 可选（仅当使用密码登录时需要）：
-  - `sshpass`
-- 安装示例：
-  - Debian/Ubuntu：
-    - `sudo apt update && sudo apt install -y python3 openssh-client sshpass`
-  - CentOS/RHEL/AlmaLinux：
-    - `sudo yum install -y python3 openssh-clients sshpass`
-    - 或 `sudo dnf install -y python3 openssh-clients sshpass`
-
-## 二、定时同时启动（3pNv）
-在控制端执行一次下发：
+## 一次下发，三机并行（30 秒）
+下发命令（示例使用快速模式）：
 ```
-python3 tools/dispatch.py --config config/cluster.json --args "<你的 main.py 参数>"
+python3 tools/dispatch.py --config config/cluster.json --args "--quick"
 ```
-- 远端以后台方式运行，等待到 `start_time_utc` 到点后执行：`python3 -u main.py <你的参数>`，并将输出追加到 `test_data/reports/<STAMP>/run.log`；错误与启动信息汇总到 `/tmp/volume-test-error.log`
-- 每台虚拟机会在 `test_data/reports/<YYYYMMDD-HHMM>/` 生成：
-  - Markdown 主报告：`storage_performance_report_<STAMP>.md`（或 `-quick.md`）
-  - JSON 数据：`report.json`
-  - 运行日志：`run.log`
-- 说明：`<STAMP>` 即分钟级目录名（UTC），如 `20251209-1005`
+发生了什么：
+- 控制端通过 SSH 把“到点即跑”的命令下发到每台 VM。
+- 远端创建分钟目录 `test_data/reports/<STAMP>/` 并写入 `run.log`。
+- 到点后运行 `python3 -u main.py --quick --stamp <STAMP>`，DD 与 FIO 在同一目录产出报告。
 
-### 二.1 立即执行技巧
-- 如需立即执行，可将 `start_time_utc` 设置为当前或过去的 UTC 分钟；调度会跳过等待直接启动。
+立即执行技巧：
+- 把 `start_time_utc` 设为“当前或过去的 UTC 分钟”，调度会跳过等待直接启动。
 
-### 二.2 远端快速验证
-``` 
+## 快速验证（可选，10 秒）
+```
 python3 tools/verify.py --config config/cluster.json
 ```
-- 自动检查远端 `remote_workdir`、`python3` 与 `fio` 是否可用、`sudo` 免密状态、分钟目录写入与 `run.log` 内容，以及 `main.py` 进程存在性。
+它会检查每台 VM：
+- `remote_workdir` 与 `main.py` 是否存在
+- `python3`、`fio` 是否可用
+- `sudo -n` 是否免密
+- 能否写入分钟目录与 `run.log`，并查看运行中的 `main.py` 进程
 
-## 三、归集与合并
-1）归集（自动用 `start_time_utc` 推导目录）
+## 归集与聚合（60–180 秒，取决于网络）
+归集远端报告到本地：
 ```
 python3 tools/collect.py --config config/cluster.json
 ```
-- 将每台的 `*.md` 与 `*.json` 回收到：
-  - `test_data/reports/centralized/<STAMP>/raw/<IP>.md`
-  - `test_data/reports/centralized/<STAMP>/raw/<IP>.json`
-- 同一分钟重复归集会覆盖该分钟目录
+本地产物：
+- `test_data/reports/centralized/<STAMP>/raw/<IP>.md`
+- `test_data/reports/centralized/<STAMP>/raw/<IP>.json`
 
-2）合并（基于归集的 JSON）
+生成聚合报告（自动输出 Markdown 与 JSON）：
 ```
 python3 tools/aggregate.py --config config/cluster.json
 ```
-- 生成 `test_data/reports/centralized/<STAMP>/aggregate.json`
-- 规则：
-  - IOPS/带宽：同 `name` 求和
-  - 延迟：同 `name` 算术平均
-- 元信息：
-  - `p` 来自 `config/cluster.json`
-  - `vm_count` 自动为 `raw/*.json` 的份数（即“几 v”）
-  - `sources` 列出来源虚拟机 IP
+本地产物：
+- `test_data/reports/centralized/<STAMP>/aggregate.md`
+- `test_data/reports/centralized/<STAMP>/aggregate.json`
+说明：
+- IOPS/带宽按相同 `name` 聚合求和；延迟按相同 `name` 求算术平均。
+- 元信息包含 `p`、`vm_count`、`sources`（IP 列表）与时间戳。
 
-## 四、对比报告
-- 仅支持同类型（同 `p`）聚合 JSON 的对比
-- 自动选择最新与上一次：
+## 对比历史（可选）
+自动选择最新与上一次：
 ```
 python3 tools/compare.py --auto
 ```
-- 或指定两次分钟目录：
+或指定两次分钟目录：
 ```
 python3 tools/compare.py --baseline 20251201-1005 --current 20251209-1005
 ```
-- 输出：`test_data/reports/centralized/compare/<baseline>_vs_<current>.json`
-  - IOPS/带宽按“越大越好”的差值与百分比
-  - 延迟按“越小越好”的差值与百分比，标注 `improved/declined/flat`
+输出：`test_data/reports/centralized/compare/<baseline>_vs_<current>.json`
 
-## 五、注意事项
-- 远端必须在 `remote_workdir` 部署本项目代码，并可执行 `python3 main.py <你的参数>` 产出报告
-- 时间统一为 UTC 的分钟级目录名；无需 `run_id`
-- 密码登录仅在不得已时使用，优先免密 `key`
-- 失败虚拟机不会阻塞聚合，对应 IP 会在合并元信息中缺失或在归集日志中提示
-- `config/cluster.json` 包含敏感信息，已在 `.gitignore` 忽略；如需协作，请提交不含敏感字段的 `config/cluster.example.json` 示例。
+## 常见问题
+- SSH 密码登录报错：控制端需安装 `sshpass`。
+- 远端目录缺失：确保把项目代码部署到 `remote_workdir`，并能运行 `python3 main.py`。
+- `fio` 不存在：在远端安装 `fio`（Ubuntu: `sudo apt install fio`；RHEL: `sudo yum install fio`）。
+- `sudo` 需要密码：在远端配置免密或将 `sudo` 设为 `false`（可能影响需要特权的操作）。
+- 归集不到文件：确认分钟戳 `<STAMP>` 与 `start_time_utc` 一致，以及网络与权限正常。
 
-## 六、快速自检
-- 在本地运行单机快速测试：
+## 安全与协作
+- `config/cluster.json` 含敏感信息，已在 `.gitignore` 忽略；请勿提交到仓库。
+- 如需共享模板，使用 `config/cluster.example.json`。
+- 优先使用密钥认证（`auth.type=key`），避免明文密码泄露风险。
+
+## 期望的目录结构（参考）
 ```
-python3 tests/test_report_paths.py
+test_data/
+  reports/
+    <STAMP>/
+      storage_performance_report_<STAMP>-quick.md
+      fio_detailed_report-quick.md
+      report.json
+      run.log
+    centralized/
+      <STAMP>/
+        raw/
+          <IP>.md
+          <IP>.json
+        aggregate.md
+        aggregate.json
 ```
-- 预期输出：在 `test_data/reports/<当前UTC分钟>/` 生成 `fio_detailed_report-quick.md`、主报告 `storage_performance_report_<STAMP>-quick.md` 和 `report.json`
 
-如需我替你填入真实 IP 与认证配置，提供 3 台虚拟机的信息后即可直接按上述命令执行 3p3v。 
+现在就可以把你的三台虚拟机信息填入 `config/cluster.json`，执行一次下发：
+```
+python3 tools/dispatch.py --config config/cluster.json --args "--quick"
+```
+等待完成后，直接运行归集与聚合两条命令，拿到集中化的 Markdown 与 JSON 报告。
