@@ -33,8 +33,8 @@ def build_remote_command(remote_workdir: str, start_time_utc_min: str, main_args
         cmd = (
             f"bash -lc 'cd {shlex.quote(remote_workdir)}; "
             f"T=$(date -u -d \"{start_str}\" +%s); D=$((T-$(date -u +%s))); "
-            f"{sudo_prefix}mkdir -p {log_dir}; if [ $D -gt 0 ]; then sleep $D; fi; "
-            f"nohup sh -c \"{sudo_prefix}python3 -u main.py {main_args} 2>&1 | {sudo_prefix}tee -a {log_file}\" </dev/null >/dev/null 2>&1 &'"
+            f"{sudo_prefix}mkdir -p {log_dir}; "
+            f"nohup bash -c \"if [ \\$D -gt 0 ]; then sleep \\$D; fi; {sudo_prefix}python3 -u main.py {main_args} 2>&1 | {sudo_prefix}tee -a {log_file}\" >>/tmp/volume-test-error.log 2>&1 &'"
         )
     return cmd
 
@@ -43,13 +43,13 @@ def ssh_run(host: str, user: str, auth: dict, remote_cmd: str):
     if auth.get('type') == 'key':
         key = os.path.expanduser(auth.get('value'))
         base = [
-            'ssh', '-tt', '-i', key, '-o', 'StrictHostKeyChecking=no', f"{user}@{host}", remote_cmd
+            'ssh', '-T', '-i', key, '-o', 'StrictHostKeyChecking=no', f"{user}@{host}", remote_cmd
         ]
         return subprocess.run(base, capture_output=True, text=True)
     elif auth.get('type') == 'password':
         pwd = auth.get('value')
         base = [
-            'sshpass', '-p', pwd, 'ssh', '-tt', '-o', 'StrictHostKeyChecking=no', f"{user}@{host}", remote_cmd
+            'sshpass', '-p', pwd, 'ssh', '-T', '-o', 'StrictHostKeyChecking=no', f"{user}@{host}", remote_cmd
         ]
         return subprocess.run(base, capture_output=True, text=True)
     else:
