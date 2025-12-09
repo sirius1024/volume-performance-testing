@@ -67,7 +67,7 @@ def aggregate_cases(files: List[str]) -> Dict:
 def main():
     import argparse
     parser = argparse.ArgumentParser(description='合并聚合 JSON 报告')
-    parser.add_argument('--config', default='config/cluster.yaml')
+    parser.add_argument('--config', default='config/cluster.json')
     args = parser.parse_args()
 
     cfg = load_cluster(args.config)

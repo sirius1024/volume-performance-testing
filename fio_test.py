@@ -66,7 +66,7 @@ class FIOTestRunner:
             self.logger.warning(f"加载核心场景失败: {str(e)}")
     
     def run_comprehensive_fio_tests(self) -> List[TestResult]:
-        """运行完整的FIO测试套件（420种场景）"""
+        """运行完整的FIO测试套件（480种场景）"""
         all_results = []
         core = self._run_core_scenarios()
         if core:
@@ -452,7 +452,7 @@ class FIOTestRunner:
             self.logger.warning(f"清理FIO测试文件时出错: {str(e)}")
     
     def generate_detailed_report(self, results: List[TestResult], output_file: str = "fio_detailed_report.md"):
-        """生成详细的FIO测试报告，包含所有420个测试场景"""
+        """生成详细的FIO测试报告，包含本次执行的所有测试场景"""
         try:
             with open(output_file, 'w', encoding='utf-8') as f:
                 self._write_report_header(f)
@@ -469,7 +469,7 @@ class FIOTestRunner:
         from datetime import datetime
         f.write("# FIO存储性能测试详细报告\n\n")
         f.write(f"**生成时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-        f.write("本报告包含了所有490个FIO测试场景的详细结果。\n\n")
+        f.write("本报告包含本次执行的FIO测试场景的详细结果。\n\n")
     
     def _write_test_matrix_summary(self, f):
         """写入测试矩阵摘要"""

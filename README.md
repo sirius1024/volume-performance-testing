@@ -242,6 +242,7 @@ volume-performance-testing/
 ├── README.md                 # 项目文档
 ├── LICENSE                   # 开源许可证
 ├── .gitignore               # Git 忽略文件配置
+├── config/cluster.example.json # 集群配置模板（不要提交真实凭据）
 └── test_data/
     └── reports/
         └── YYYYMMDD_HHMMSS/
@@ -318,6 +319,12 @@ volume-performance-testing/
 
 #### 代码风格
 - Python 3.6+，PEP 8，类型注解
+
+### 安全提示
+
+- 不要将真实的 `config/cluster.json` 提交到仓库。该路径已在 `.gitignore` 中忽略。
+- 如需多人协作，请复制 `config/cluster.example.json` 为 `config/cluster.json` 并填入你的环境信息。
+- 使用密钥认证优先于明文密码；如必须使用密码，确保仓库外部管理并避免泄露。
 
 ## 🧪 测试配置
 
