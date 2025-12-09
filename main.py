@@ -288,7 +288,7 @@ class StoragePerformanceTest:
         
         # 生成详细报告
         if results:
-            ts = self.run_timestamp or time.strftime('%Y%m%d-%H%M')
+            ts = self.run_timestamp or time.strftime('%Y%m%d-%H%M', time.gmtime())
             reports_dir = os.path.join(self.test_dir, "reports", ts)
             ensure_directory(reports_dir)
             name = "fio_detailed_report.md"
@@ -309,7 +309,8 @@ class StoragePerformanceTest:
         core_results = []
         
         start_time = time.time()
-        self.run_timestamp = time.strftime('%Y%m%d-%H%M')
+        if not self.run_timestamp:
+            self.run_timestamp = time.strftime('%Y%m%d-%H%M', time.gmtime())
         self.quick_mode = quick_mode
         
         try:
@@ -332,7 +333,7 @@ class StoragePerformanceTest:
                        output_file: Optional[str] = None):
         """生成测试报告"""
         if output_file is None:
-            ts = self.run_timestamp or time.strftime('%Y%m%d-%H%M')
+            ts = self.run_timestamp or time.strftime('%Y%m%d-%H%M', time.gmtime())
             reports_dir = os.path.join(self.test_dir, "reports", ts)
             ensure_directory(reports_dir)
             name = f"storage_performance_report_{ts}.md"
@@ -419,6 +420,7 @@ def main():
     parser.add_argument("--quick", action="store_true", help="快速模式，仅运行代表性测试")
     parser.add_argument("--cleanup", action="store_true", help="测试完成后清理测试文件")
     parser.add_argument("--output", help="指定报告输出文件路径")
+    parser.add_argument("--stamp", help="指定UTC分钟戳用于报告目录，例如 20251209-1114")
     
     args = parser.parse_args()
     
@@ -449,6 +451,8 @@ def main():
     try:
         # 创建测试实例
         test_runner = StoragePerformanceTest(args.test_dir, args.runtime)
+        if args.stamp:
+            test_runner.run_timestamp = args.stamp
         
         print(f"\n=== 存储性能测试开始 ===")
         print(f"测试目录: {args.test_dir}")

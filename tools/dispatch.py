@@ -20,6 +20,9 @@ def build_remote_command(remote_workdir: str, start_time_utc_min: str, main_args
     start_str = dt.strftime('%Y-%m-%d %H:%M:00')
     stamp = dt.strftime('%Y%m%d-%H%M')
     sudo_prefix = 'sudo -E ' if sudo else ''
+    # 统一分钟戳：将调度的 UTC 分钟戳传递给 main.py，确保报告目录与 run.log 一致
+    if '--stamp' not in f" {main_args} ":
+        main_args = (main_args + f" --stamp {stamp}").strip()
     log_dir = f"test_data/reports/{stamp}"
     log_file = f"{log_dir}/run.log"
     if stream:
