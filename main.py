@@ -9,6 +9,7 @@ import argparse
 import os
 import sys
 import time
+import json
 from typing import List, Optional
 
 from common import TestResult, Logger, SystemInfoCollector, ensure_directory
@@ -287,7 +288,7 @@ class StoragePerformanceTest:
         
         # 生成详细报告
         if results:
-            ts = self.run_timestamp or time.strftime('%Y%m%d_%H%M%S')
+            ts = self.run_timestamp or time.strftime('%Y%m%d-%H%M')
             reports_dir = os.path.join(self.test_dir, "reports", ts)
             ensure_directory(reports_dir)
             name = "fio_detailed_report.md"
@@ -308,7 +309,7 @@ class StoragePerformanceTest:
         core_results = []
         
         start_time = time.time()
-        self.run_timestamp = time.strftime('%Y%m%d_%H%M%S')
+        self.run_timestamp = time.strftime('%Y%m%d-%H%M')
         self.quick_mode = quick_mode
         
         try:
@@ -331,7 +332,7 @@ class StoragePerformanceTest:
                        output_file: Optional[str] = None):
         """生成测试报告"""
         if output_file is None:
-            ts = self.run_timestamp or time.strftime('%Y%m%d_%H%M%S')
+            ts = self.run_timestamp or time.strftime('%Y%m%d-%H%M')
             reports_dir = os.path.join(self.test_dir, "reports", ts)
             ensure_directory(reports_dir)
             name = f"storage_performance_report_{ts}.md"
@@ -355,6 +356,29 @@ class StoragePerformanceTest:
         core_results.extend([r for r in dd_results if r.test_name.startswith("CORE ")])
         core_results.extend([r for r in fio_results if r.test_name.startswith("CORE ")])
         self.report_generator.generate_report(dd_results, fio_results, output_file, system_info, core_results)
+        dirn = os.path.dirname(output_file)
+        report_json = os.path.join(dirn, "report.json")
+        cases = []
+        for r in fio_results:
+            cases.append({
+                "name": r.test_name,
+                "read": {
+                    "iops": r.read_iops,
+                    "bw_MBps": r.read_mbps,
+                    "lat_us": r.read_latency_us
+                },
+                "write": {
+                    "iops": r.write_iops,
+                    "bw_MBps": r.write_mbps,
+                    "lat_us": r.write_latency_us
+                }
+            })
+        try:
+            with open(report_json, "w", encoding="utf-8") as f:
+                json.dump({"cases": cases}, f, ensure_ascii=False, indent=2)
+            self.logger.info(f"JSON报告已生成: {report_json}")
+        except Exception as e:
+            self.logger.warning(f"写入JSON报告失败: {str(e)}")
         
         return output_file
     
