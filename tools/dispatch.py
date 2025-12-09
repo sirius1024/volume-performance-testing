@@ -15,7 +15,7 @@ def load_cluster(path: str) -> dict:
         return json.load(f)
 
 
-def build_remote_command(remote_workdir: str, start_time_utc_min: str, main_args: str, sudo: bool, stream: bool) -> str:
+def build_remote_command(remote_workdir: str, start_time_utc_min: str, main_args: str, sudo: bool) -> str:
     dt = datetime.strptime(start_time_utc_min, '%Y-%m-%d %H:%M')
     start_str = dt.strftime('%Y-%m-%d %H:%M:00')
     stamp = dt.strftime('%Y%m%d-%H%M')
@@ -25,20 +25,11 @@ def build_remote_command(remote_workdir: str, start_time_utc_min: str, main_args
         main_args = (main_args + f" --stamp {stamp}").strip()
     log_dir = f"test_data/reports/{stamp}"
     log_file = f"{log_dir}/run.log"
-    if stream:
-        cmd = (
-            f"bash -lc 'cd {shlex.quote(remote_workdir)}; "
-            f"T=$(date -u -d \"{start_str}\" +%s); D=$((T-$(date -u +%s))); "
-            f"{sudo_prefix}mkdir -p {log_dir}; if [ $D -gt 0 ]; then sleep $D; fi; "
-            f"{sudo_prefix}python3 -u main.py {main_args} 2>&1 | {sudo_prefix}tee -a {log_file}'"
-        )
-    else:
-        cmd = (
-            f"bash -lc 'cd {shlex.quote(remote_workdir)}; "
-            f"T=$(date -u -d \"{start_str}\" +%s); D=$((T-$(date -u +%s))); "
-            f"{sudo_prefix}mkdir -p {log_dir}; "
-            f"nohup bash -c \"if [ \\$D -gt 0 ]; then sleep \\$D; fi; {sudo_prefix}python3 -u main.py {main_args} 2>&1 | {sudo_prefix}tee -a {log_file}\" >>/tmp/volume-test-error.log 2>&1 &'"
-        )
+    cmd = (
+        f"bash -lc 'cd {shlex.quote(remote_workdir)}; "
+        f"{sudo_prefix}mkdir -p {log_dir}; "
+        f"nohup bash -lc \"T=$(date -u -d \"{start_str}\" +%s); D=$((T-$(date -u +%s))); if [ $D -gt 0 ]; then sleep $D; fi; {sudo_prefix}python3 -u main.py {main_args} 2>&1 | {sudo_prefix}tee -a {log_file}\" >>/tmp/volume-test-error.log 2>&1 &'"
+    )
     return cmd
 
 
@@ -73,13 +64,11 @@ def _extract_main_args() -> str:
 def main():
     parser = argparse.ArgumentParser(description='定时下发远端测试', allow_abbrev=False)
     parser.add_argument('--config', default='config/cluster.json')
-    parser.add_argument('--stream', action='store_true')
     args, unknown = parser.parse_known_args()
 
     cfg = load_cluster(args.config)
     remote_workdir = cfg.get('remote_workdir', '/data/volume-performance-testing')
     start_time = cfg['start_time_utc']
-    stream = args.stream
     # 提取 main.py 参数（支持 "--" 或 "--args" 两种方式）
     if '--' in unknown:
         i = unknown.index('--')
@@ -89,8 +78,6 @@ def main():
         main_args = ' '.join(unknown[i+1:]).strip()
     else:
         main_args = _extract_main_args()
-    if (not stream) and (' --stream' in f" {main_args}"):
-        pass
     sudo_default = bool(cfg.get('sudo', False))
     errors = []
     for vm in cfg['vms']:
@@ -98,7 +85,7 @@ def main():
         user = vm['user']
         auth = vm['auth']
         sudo = bool(vm.get('sudo', sudo_default))
-        remote_cmd = build_remote_command(remote_workdir, start_time, main_args, sudo, stream)
+        remote_cmd = build_remote_command(remote_workdir, start_time, main_args, sudo)
         print(f"EXEC {user}@{host} [{auth.get('type','unknown')}]: {remote_cmd}")
         r = ssh_run(host, user, auth, remote_cmd)
         if r.returncode != 0:
