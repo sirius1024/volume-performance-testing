@@ -21,8 +21,8 @@ def main():
             "dd": data.get("dd", []),
         }, f, ensure_ascii=False, indent=2)
     print(dst)
+    print("注意：core_scenarios.yaml 为兼容旧配置；推荐直接维护 core_scenarios.json")
 
 
 if __name__ == "__main__":
     main()
-

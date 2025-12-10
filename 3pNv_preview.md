@@ -73,15 +73,12 @@ python3 tools/aggregate.py --config config/cluster.json
 - 元信息包含 `p`、`vm_count`、`sources`（IP 列表）与时间戳。
 
 ## 对比历史（可选）
-自动选择最新与上一次：
+目录模式（推荐）：指定两个聚合报告目录，仅对比聚合后的 `aggregate.json`
 ```
-python3 tools/compare.py --auto
+python3 tools/compare.py --dirA test_data/reports/centralized/<STAMP_A> --dirB test_data/reports/centralized/<STAMP_B>
 ```
-或指定两次分钟目录：
-```
-python3 tools/compare.py --baseline 20251201-1005 --current 20251209-1005
-```
-输出：`test_data/reports/centralized/compare/<baseline>_vs_<current>.json`
+输出：`test_data/reports/compare/<STAMP_A>_vs_<STAMP_B>.json` 与 `.md`
+说明：两份报告必须是相同类型；聚合报告对比要求 `p` 与 `vm_count` 相同（例如 3pNv vs 3pNv，N 相同）。
 
 ## 常见问题
 - SSH 密码登录报错：控制端需安装 `sshpass`。

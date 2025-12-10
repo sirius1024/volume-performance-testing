@@ -167,6 +167,7 @@ def main():
         dd_core = core.get("dd", [])
         if fio_core or dd_core:
             f.write("\n## CORE 场景（JSON）\n\n")
+            f.write("> 提示：核心场景也可通过 config/core_scenarios.yaml（旧格式）维护，建议使用 JSON。\n\n")
             if fio_core:
                 f.write("### FIO CORE\n\n")
                 for sc in fio_core:

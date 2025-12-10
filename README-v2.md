@@ -239,15 +239,21 @@ python3 tools/aggregate.py --config config/cluster.json
 - 聚合规则：IOPS/带宽按同名用例求和；延迟按同名用例算术平均；元信息含 `p/vm_count/sources/timestamp`
 
 ### 历史对比（可选）
-自动选择最新与上一次：
+推荐使用“目录模式”直接指定两个报告文件夹：
+
+- 对比 3pNv 聚合报告（只对比聚合后的 aggregate.json）：
 ```
-python3 tools/compare.py --auto
+python3 tools/compare.py --dirA test_data/reports/centralized/<STAMP_A> --dirB test_data/reports/centralized/<STAMP_B>
 ```
-或指定分钟目录：
+输出：`test_data/reports/compare/<STAMP_A>_vs_<STAMP_B>.json` 与 `.md`
+
+- 对比单机报告（只对比单机的 report.json 或解析 storage_performance_report_*.md / fio_detailed_report*.md）：
 ```
-python3 tools/compare.py --baseline 20251201-1005 --current 20251209-1005
+python3 tools/compare.py --dirA test_data/reports/<STAMP_A> --dirB test_data/reports/<STAMP_B>
 ```
-输出：`test_data/reports/centralized/compare/<baseline>_vs_<current>.json`
+输出：`test_data/reports/compare/<STAMP_A>_vs_<STAMP_B>.json` 与 `.md`
+
+约束：两份报告必须是相同类型；聚合报告对比要求 `p` 与 `vm_count` 相同（例如 3pNv vs 3pNv，其中 N 相同）。
 
 ### 常见问题
 - 控制端无 `sshpass`：安装后再用密码登录

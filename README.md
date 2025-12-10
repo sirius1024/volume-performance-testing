@@ -480,9 +480,19 @@ sudo yum install fio      # CentOS/RHEL
 
 **如果这个项目对你有帮助，请给我们一个 ⭐️！**
 ### 核心业务场景
-- 维护位置：`config/core_scenarios.yaml`
-- 执行策略：DD 与 FIO 在快速/完整模式都会追加执行核心场景；报告在系统信息之后展示该板块
-- 清单导出：`tools/dump_commands.py` 会在“CORE 场景（YAML）”分节展示摘要
+- 维护位置：`config/core_scenarios.json`（兼容旧版 `core_scenarios.yaml`）
+- 执行策略：DD 与 FIO 在快速/完整模式可追加执行核心场景；报告在系统信息之后展示该板块
+- 清单导出：`tools/dump_commands.py` 会在“CORE 场景（JSON）”分节展示摘要
 ### 多机归集与聚合（3pNv）
 - 归集：`python3 tools/collect.py --config config/cluster.json` 将每台的 `*.md` 与 `*.json` 拉取到 `test_data/reports/centralized/<STAMP>/raw/`
 - 聚合：`python3 tools/aggregate.py --config config/cluster.json` 自动生成 `aggregate.json` 与 `aggregate.md`（同目录），按同名用例汇总 IOPS/带宽并平均延迟
+ - 历史对比（目录模式）：
+   - 聚合报告（centralized）：
+   ```
+   python3 tools/compare.py --dirA test_data/reports/centralized/<STAMP_A> --dirB test_data/reports/centralized/<STAMP_B>
+   ```
+   - 单机报告（reports）：
+   ```
+   python3 tools/compare.py --dirA test_data/reports/<STAMP_A> --dirB test_data/reports/<STAMP_B>
+   ```
+   - 约束：两份报告必须是相同类型；聚合对比需要 `p` 与 `vm_count` 一致（例如 3pNv vs 3pNv）。

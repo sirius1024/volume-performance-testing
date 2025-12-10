@@ -15,9 +15,10 @@ def main():
         rpt.run_timestamp = stamp
     rpt.quick_mode = True
     fio_results = rpt.run_fio_tests(quick_mode=True)
+    # 生成报告 JSON+MD（与最新逻辑一致）
+    rpt.generate_report([], fio_results)
     print(f"生成: {os.path.join(test_dir, 'reports', rpt.run_timestamp or 'unknown')}")
 
 
 if __name__ == "__main__":
     main()
-
