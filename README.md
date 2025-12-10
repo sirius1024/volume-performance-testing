@@ -170,6 +170,34 @@ python3 tools/aggregate.py --config config/cluster.json
 ```
 生成 `aggregate.json` 和 `aggregate.md`，汇总所有节点的 IOPS 和带宽。
 
+## 📈 报告对比
+
+本工具提供强大的报告对比功能，用于分析性能变化趋势（例如回归测试或调优前后对比）。支持单机报告和集群聚合报告的对比。
+
+### 1. 自动对比（推荐）
+自动对比最近两次的**集群聚合报告**：
+```bash
+python3 tools/compare.py --auto
+```
+
+### 2. 指定版本对比
+指定两个时间戳（即 `test_data/reports/centralized/` 下的目录名）进行对比：
+```bash
+python3 tools/compare.py --baseline 20251210-1000 --current 20251210-1100 --source centralized
+```
+
+### 3. 任意目录对比（通用）
+对比任意两个包含测试结果的目录（支持单机报告或聚合报告）：
+```bash
+# 对比两份单机报告
+python3 tools/compare.py --dirA test_data/reports/20251210-1000 --dirB test_data/reports/20251210-1100
+
+# 对比两份集群聚合报告
+python3 tools/compare.py --dirA test_data/reports/centralized/v1 --dirB test_data/reports/centralized/v2
+```
+
+> **输出说明**：对比结果将生成在 `test_data/reports/compare/` 目录下，包含详细的 JSON 数据和易读的 Markdown 报告，展示 IOPS、带宽和延迟的变化量及百分比，并自动标记性能提升 (📈) 或下降 (📉)。
+
 ## ⚙️ 参数说明
 
 | 参数 | 说明 | 默认值 |
