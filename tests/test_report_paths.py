@@ -4,7 +4,8 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from main import StoragePerformanceTest
-from common import TestResult, ensure_directory
+from models.result import TestResult
+from utils.file_utils import ensure_directory
 
 def make_dummy_fio_results():
     r = TestResult(test_name="dummy_fio", test_type="fio")

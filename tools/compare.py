@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
+import sys
 import json
+
+# 添加项目根目录到 sys.path 以便导入 config_loader
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config_loader import load_cluster_config
 
 
 def load(path: str) -> dict:

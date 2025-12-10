@@ -16,7 +16,9 @@ import subprocess
 import time
 from typing import List, Dict, Any, Optional
 
-from common import TestResult, Logger, clear_system_cache
+from models.result import TestResult
+from utils.logger import Logger
+from utils.file_utils import clear_system_cache
 from core_scenarios_loader import load_core_scenarios
 
 

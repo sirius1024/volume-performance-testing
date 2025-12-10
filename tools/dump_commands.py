@@ -10,7 +10,8 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from fio_test import FIOTestRunner
 from dd_test import DDTestRunner
-from common import Logger, ensure_directory
+from utils.logger import Logger
+from utils.file_utils import ensure_directory
 from core_scenarios_loader import load_core_scenarios
 
 

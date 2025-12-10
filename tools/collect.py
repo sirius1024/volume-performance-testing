@@ -6,10 +6,9 @@ import subprocess
 from datetime import datetime
 import json
 
-
-def load_cluster(path: str) -> dict:
-    with open(path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+# 添加项目根目录到 sys.path 以便导入 config_loader
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config_loader import load_cluster_config
 
 
 def stamp_from_start(start_time_utc_min: str) -> str:
@@ -34,7 +33,7 @@ def main():
     parser.add_argument('--config', default='config/cluster.json')
     args = parser.parse_args()
 
-    cfg = load_cluster(args.config)
+    cfg = load_cluster_config(args.config)
     start_time = cfg['start_time_utc']
     stamp = stamp_from_start(start_time)
     centralized = os.path.join('test_data', 'reports', 'centralized', stamp)

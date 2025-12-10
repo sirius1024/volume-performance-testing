@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
+import sys
 import json
 import time
 from typing import Dict, List
 
 import json as _json
 
-
-def load_cluster(path: str) -> dict:
-    with open(path, 'r', encoding='utf-8') as f:
-        return _json.load(f)
+# 添加项目根目录到 sys.path 以便导入 config_loader
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config_loader import load_cluster_config
 
 
 def aggregate_cases(files: List[str]) -> Dict:
@@ -71,7 +71,7 @@ def main():
     parser.add_argument('--config', default='config/cluster.json')
     args = parser.parse_args()
 
-    cfg = load_cluster(args.config)
+    cfg = load_cluster_config(args.config)
     from datetime import datetime
     dt = datetime.strptime(cfg['start_time_utc'], '%Y-%m-%d %H:%M')
     stamp = dt.strftime('%Y%m%d-%H%M')

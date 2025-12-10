@@ -6,10 +6,9 @@ import json
 import subprocess
 from datetime import datetime
 
-
-def load_cfg(path='config/cluster.json'):
-    with open(path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+# 添加项目根目录到 sys.path 以便导入 config_loader
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config_loader import load_cluster_config
 
 
 def stamp_from_start(start: str) -> str:
@@ -34,7 +33,7 @@ def main():
     parser.add_argument('--config', default='config/cluster.json')
     args = parser.parse_args()
 
-    cfg = load_cfg(args.config)
+    cfg = load_cluster_config(args.config)
     stamp = args.stamp or stamp_from_start(cfg['start_time_utc'])
     workdir = cfg.get('remote_workdir', '/data/volume-performance-testing')
     base = os.path.join(workdir, 'test_data', 'reports', stamp)

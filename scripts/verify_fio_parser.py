@@ -7,7 +7,8 @@ import json
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from fio_test import FIOTestRunner
-from common import TestResult, Logger
+from models.result import TestResult
+from utils.logger import Logger
 
 
 def verify_file(json_path: str):
