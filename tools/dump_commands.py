@@ -148,7 +148,7 @@ def main():
 
     fio_cmds = build_fio_commands(test_dir, runtime=3)
     dd_cmds = build_dd_commands(test_dir)
-    core = load_core_scenarios("config/core_scenarios.yaml")
+    core = load_core_scenarios("config/core_scenarios.json")
 
     with open(out_path, "w", encoding="utf-8") as f:
         f.write("# 全量测试命令清单\n\n")
@@ -166,7 +166,7 @@ def main():
         fio_core = core.get("fio", [])
         dd_core = core.get("dd", [])
         if fio_core or dd_core:
-            f.write("\n## CORE 场景（YAML）\n\n")
+            f.write("\n## CORE 场景（JSON）\n\n")
             if fio_core:
                 f.write("### FIO CORE\n\n")
                 for sc in fio_core:

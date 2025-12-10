@@ -1,4 +1,5 @@
 import os
+import json
 
 def _parse_value(v):
     s = v.strip()
@@ -12,6 +13,17 @@ def _parse_value(v):
 def load_core_scenarios(path: str):
     if not os.path.exists(path):
         return {"fio": [], "dd": []}
+    # 支持 JSON 与简易 YAML（旧格式）
+    if path.lower().endswith(".json"):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            fio = data.get("fio", [])
+            dd = data.get("dd", [])
+            return {"fio": fio, "dd": dd}
+        except Exception:
+            return {"fio": [], "dd": []}
+    # 简易 YAML 解析（兼容旧）
     fio = []
     dd = []
     section = None
@@ -41,4 +53,3 @@ def load_core_scenarios(path: str):
                 v = v.strip()
                 current[k] = _parse_value(v)
     return {"fio": fio, "dd": dd}
-

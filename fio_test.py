@@ -23,7 +23,7 @@ from core_scenarios_loader import load_core_scenarios
 class FIOTestRunner:
     """FIO测试执行器"""
     
-    def __init__(self, test_dir: str, logger: Logger, runtime: int = 3, core_file: str = "config/core_scenarios.yaml"):
+    def __init__(self, test_dir: str, logger: Logger, runtime: int = 3, core_file: str = "config/core_scenarios.json"):
         self.test_dir = test_dir
         self.logger = logger
         self.runtime = runtime  # 测试运行时间（秒）
@@ -332,33 +332,43 @@ class FIOTestRunner:
         return result
     
     def _parse_fio_json_output(self, output: str, result: TestResult):
-        """解析FIO JSON输出"""
         try:
             data = json.loads(output)
             jobs = data.get('jobs', [])
-            
             if not jobs:
                 return
-            
-            job = jobs[0]  # 使用第一个job的数据
-            
-            # 读取性能数据
-            read_data = job.get('read', {})
-            if read_data:
-                result.read_iops = read_data.get('iops', 0)
-                result.read_mbps = read_data.get('bw', 0) / 1024  # 转换为MB/s
-                result.read_latency_us = read_data.get('lat_ns', {}).get('mean', 0) / 1000  # 转换为微秒
-            
-            # 写入性能数据
-            write_data = job.get('write', {})
-            if write_data:
-                result.write_iops = write_data.get('iops', 0)
-                result.write_mbps = write_data.get('bw', 0) / 1024  # 转换为MB/s
-                result.write_latency_us = write_data.get('lat_ns', {}).get('mean', 0) / 1000  # 转换为微秒
-            
-            # 计算总体吞吐量
+            read_iops_total = 0.0
+            write_iops_total = 0.0
+            read_bw_total = 0.0
+            write_bw_total = 0.0
+            read_lat_sum_ns = 0.0
+            write_lat_sum_ns = 0.0
+            read_lat_n = 0
+            write_lat_n = 0
+            for job in jobs:
+                rd = job.get('read', {})
+                wr = job.get('write', {})
+                read_iops_total += float(rd.get('iops', 0) or 0)
+                write_iops_total += float(wr.get('iops', 0) or 0)
+                read_bw_total += float(rd.get('bw', 0) or 0)
+                write_bw_total += float(wr.get('bw', 0) or 0)
+                rlat = rd.get('lat_ns', {})
+                wlat = wr.get('lat_ns', {})
+                rn = int(rlat.get('N', 0) or 0)
+                wn = int(wlat.get('N', 0) or 0)
+                if rn > 0:
+                    read_lat_sum_ns += float(rlat.get('mean', 0) or 0) * rn
+                    read_lat_n += rn
+                if wn > 0:
+                    write_lat_sum_ns += float(wlat.get('mean', 0) or 0) * wn
+                    write_lat_n += wn
+            result.read_iops = read_iops_total
+            result.write_iops = write_iops_total
+            result.read_mbps = read_bw_total / 1024.0
+            result.write_mbps = write_bw_total / 1024.0
+            result.read_latency_us = (read_lat_sum_ns / read_lat_n / 1000.0) if read_lat_n > 0 else 0.0
+            result.write_latency_us = (write_lat_sum_ns / write_lat_n / 1000.0) if write_lat_n > 0 else 0.0
             result.throughput_mbps = result.read_mbps + result.write_mbps
-            
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             self.logger.warning(f"解析FIO JSON输出时出错: {str(e)}")
     
@@ -413,6 +423,10 @@ class FIOTestRunner:
             return "随机写"
         elif test_type == "randrw":
             return f"随机读写({rwmix_read}%读)"
+        elif test_type == "read":
+            return "顺序读"
+        elif test_type == "write":
+            return "顺序写"
         else:
             return test_type
     
@@ -512,9 +526,7 @@ class FIOTestRunner:
             
             for idx, result in enumerate(sorted_results, 1):
                 status = "✅成功" if not result.error_message else "❌失败"
-                read_mode = self._get_test_name("randread" if result.rwmix_read == 100 else 
-                                               "randwrite" if result.rwmix_read == 0 else "randrw", 
-                                               result.rwmix_read)
+                read_mode = self._get_test_name(result.test_type, result.rwmix_read)
                 
                 f.write(f"| {idx} | {result.queue_depth} | {result.numjobs} | {read_mode} | "
                        f"{result.read_iops:.0f} | {result.write_iops:.0f} | "

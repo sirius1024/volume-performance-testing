@@ -168,10 +168,10 @@ python3 main.py --fio-info
 Apache License 2.0
 ## 📚 核心业务场景配置
 
-- 维护位置：`config/core_scenarios.yaml`
+- 维护位置：`config/core_scenarios.json`（兼容旧版 `core_scenarios.yaml`）
 - 内容结构：包含核心场景字段（`name/rw/bs/iodepth/numjobs/rwmixread/runtime/size` 等）
 - 执行策略：DD 快速/完整均执行核心场景；FIO 核心场景当前未默认启用（需在运行器中调用）；报告在系统信息之后单独呈现
-- 清单导出：`python3 tools/dump_commands.py` 在“CORE 场景（YAML）”分节显示摘要
+- 清单导出：`python3 tools/dump_commands.py` 在“CORE 场景（JSON）”分节显示摘要
 
 ## 🧭 3pNv 快速上手（面向用户）
 

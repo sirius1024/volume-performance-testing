@@ -259,8 +259,8 @@ class StoragePerformanceTest:
         self.logger = Logger(log_file)
         
         # 创建测试执行器
-        self.dd_runner = DDTestRunner(test_dir, self.logger, core_file="config/core_scenarios.yaml")
-        self.fio_runner = FIOTestRunner(test_dir, self.logger, runtime, core_file="config/core_scenarios.yaml")
+        self.dd_runner = DDTestRunner(test_dir, self.logger, core_file="config/core_scenarios.json")
+        self.fio_runner = FIOTestRunner(test_dir, self.logger, runtime, core_file="config/core_scenarios.json")
         
         # 创建报告生成器
         self.report_generator = ReportGenerator(self.logger)

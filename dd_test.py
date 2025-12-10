@@ -17,7 +17,7 @@ from core_scenarios_loader import load_core_scenarios
 class DDTestRunner:
     """DD测试执行器"""
     
-    def __init__(self, test_dir: str, logger: Logger, core_file: str = "config/core_scenarios.yaml"):
+    def __init__(self, test_dir: str, logger: Logger, core_file: str = "config/core_scenarios.json"):
         self.test_dir = test_dir
         self.logger = logger
         try:
