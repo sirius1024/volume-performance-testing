@@ -527,11 +527,18 @@ class FIOTestRunner:
             for idx, result in enumerate(sorted_results, 1):
                 status = "✅成功" if not result.error_message else "❌失败"
                 read_mode = self._get_test_name(result.test_type, result.rwmix_read)
-                
+                show_read = result.test_type not in ("randwrite", "write")
+                show_write = result.test_type not in ("randread", "read")
+                riops = f"{result.read_iops:.0f}" if show_read else "—"
+                wiops = f"{result.write_iops:.0f}" if show_write else "—"
+                rmbps = f"{result.read_mbps:.2f}" if show_read else "—"
+                wmbps = f"{result.write_mbps:.2f}" if show_write else "—"
+                rlat = f"{result.read_latency_us:.2f}" if show_read else "—"
+                wlat = f"{result.write_latency_us:.2f}" if show_write else "—"
                 f.write(f"| {idx} | {result.queue_depth} | {result.numjobs} | {read_mode} | "
-                       f"{result.read_iops:.0f} | {result.write_iops:.0f} | "
-                       f"{result.read_mbps:.2f} | {result.write_mbps:.2f} | "
-                       f"{result.read_latency_us:.2f} | {result.write_latency_us:.2f} | {status} |\n")
+                       f"{riops} | {wiops} | "
+                       f"{rmbps} | {wmbps} | "
+                       f"{rlat} | {wlat} | {status} |\n")
             
             f.write("\n")
     
