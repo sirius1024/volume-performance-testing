@@ -3,13 +3,15 @@
 import os
 import sys
 import time
+import subprocess
 from typing import List
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from fio_test import FIOTestRunner
 from dd_test import DDTestRunner
-from common import Logger, ensure_directory
+from utils.logger import Logger
+from utils.file_utils import ensure_directory
 from core_scenarios_loader import load_core_scenarios
 
 
@@ -31,6 +33,7 @@ def build_fio_commands(test_dir: str, runtime: int) -> List[str]:
 
                     filename = f"fio_test_{block_size}_{queue_depth}_{numjobs}_{rwmix_read}"
                     ioengine = "libaio"
+                    fs_is_9p = False
                     try:
                         # 与运行器逻辑一致：在 9p 上回退 ioengine
                         p = subprocess.run(["df", "-T", test_dir], capture_output=True, text=True)
@@ -40,10 +43,12 @@ def build_fio_commands(test_dir: str, runtime: int) -> List[str]:
                                 parts = lines[1].split()
                                 if len(parts) > 1 and parts[1].lower() == "9p":
                                     ioengine = "psync"
+                                    fs_is_9p = True
                     except Exception:
                         pass
 
                     output_file = f"fio_json_{block_size}_{queue_depth}_{numjobs}_{rwmix_read}.json"
+                    direct_value = "0" if fs_is_9p and test_type in ("randread", "randrw") else "1"
                     cmd = [
                         "fio",
                         "--name=test",
@@ -54,7 +59,7 @@ def build_fio_commands(test_dir: str, runtime: int) -> List[str]:
                         f"--numjobs={numjobs}",
                         f"--runtime={runtime}",
                         "--time_based",
-                        "--direct=1",
+                        f"--direct={direct_value}",
                         f"--ioengine={ioengine}",
                         "--group_reporting",
                         "--output-format=json",
@@ -144,7 +149,7 @@ def main():
 
     fio_cmds = build_fio_commands(test_dir, runtime=3)
     dd_cmds = build_dd_commands(test_dir)
-    core = load_core_scenarios("config/core_scenarios.yaml")
+    core = load_core_scenarios("config/core_scenarios.json")
 
     with open(out_path, "w", encoding="utf-8") as f:
         f.write("# 全量测试命令清单\n\n")
@@ -162,7 +167,8 @@ def main():
         fio_core = core.get("fio", [])
         dd_core = core.get("dd", [])
         if fio_core or dd_core:
-            f.write("\n## CORE 场景（YAML）\n\n")
+            f.write("\n## CORE 场景（JSON）\n\n")
+            f.write("> 提示：核心场景也可通过 config/core_scenarios.yaml（旧格式）维护，建议使用 JSON。\n\n")
             if fio_core:
                 f.write("### FIO CORE\n\n")
                 for sc in fio_core:

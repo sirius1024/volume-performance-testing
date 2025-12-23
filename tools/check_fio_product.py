@@ -6,7 +6,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from fio_test import FIOTestRunner
-from common import Logger
+from utils.logger import Logger
 
 def main():
     runner = FIOTestRunner(test_dir="./test_data", logger=Logger("./test_data/check.log"), runtime=3)

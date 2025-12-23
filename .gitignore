@@ -1,5 +1,6 @@
 # 测试数据文件
 test_data/
+config/cluster.json
 quick_test_data/
 testfile_*
 *.dat

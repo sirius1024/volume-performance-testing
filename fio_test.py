@@ -5,7 +5,8 @@ FIO测试模块
 包含 FIOTestRunner 类与相关性能测试功能
 矩阵规模：480 场景（8块大小×6队列深度×2并发×5读写比例）
 快速模式：运行代表性组合，默认 runtime=3
-执行引擎：在 9p 文件系统自动回退为 psync，其它使用 libaio
+执行引擎与兼容性：在 9p 文件系统自动回退为 psync，且 randread/randrw 场景使用 --direct=0；其他文件系统使用 libaio 并 --direct=1
+超时保护：命令运行超时为 runtime + 60 秒
 输出：为每个场景生成 JSON 文件并解析；日志打印完整命令
 """
 
@@ -15,14 +16,16 @@ import subprocess
 import time
 from typing import List, Dict, Any, Optional
 
-from common import TestResult, Logger, clear_system_cache
+from models.result import TestResult
+from utils.logger import Logger
+from utils.file_utils import clear_system_cache
 from core_scenarios_loader import load_core_scenarios
 
 
 class FIOTestRunner:
     """FIO测试执行器"""
     
-    def __init__(self, test_dir: str, logger: Logger, runtime: int = 3, core_file: str = "config/core_scenarios.yaml"):
+    def __init__(self, test_dir: str, logger: Logger, runtime: int = 3, core_file: str = "config/core_scenarios.json"):
         self.test_dir = test_dir
         self.logger = logger
         self.runtime = runtime  # 测试运行时间（秒）
@@ -66,7 +69,7 @@ class FIOTestRunner:
             self.logger.warning(f"加载核心场景失败: {str(e)}")
     
     def run_comprehensive_fio_tests(self) -> List[TestResult]:
-        """运行完整的FIO测试套件（420种场景）"""
+        """运行完整的FIO测试套件（480种场景）"""
         all_results = []
         core = self._run_core_scenarios()
         if core:
@@ -331,33 +334,43 @@ class FIOTestRunner:
         return result
     
     def _parse_fio_json_output(self, output: str, result: TestResult):
-        """解析FIO JSON输出"""
         try:
             data = json.loads(output)
             jobs = data.get('jobs', [])
-            
             if not jobs:
                 return
-            
-            job = jobs[0]  # 使用第一个job的数据
-            
-            # 读取性能数据
-            read_data = job.get('read', {})
-            if read_data:
-                result.read_iops = read_data.get('iops', 0)
-                result.read_mbps = read_data.get('bw', 0) / 1024  # 转换为MB/s
-                result.read_latency_us = read_data.get('lat_ns', {}).get('mean', 0) / 1000  # 转换为微秒
-            
-            # 写入性能数据
-            write_data = job.get('write', {})
-            if write_data:
-                result.write_iops = write_data.get('iops', 0)
-                result.write_mbps = write_data.get('bw', 0) / 1024  # 转换为MB/s
-                result.write_latency_us = write_data.get('lat_ns', {}).get('mean', 0) / 1000  # 转换为微秒
-            
-            # 计算总体吞吐量
+            read_iops_total = 0.0
+            write_iops_total = 0.0
+            read_bw_total = 0.0
+            write_bw_total = 0.0
+            read_lat_sum_ns = 0.0
+            write_lat_sum_ns = 0.0
+            read_lat_n = 0
+            write_lat_n = 0
+            for job in jobs:
+                rd = job.get('read', {})
+                wr = job.get('write', {})
+                read_iops_total += float(rd.get('iops', 0) or 0)
+                write_iops_total += float(wr.get('iops', 0) or 0)
+                read_bw_total += float(rd.get('bw', 0) or 0)
+                write_bw_total += float(wr.get('bw', 0) or 0)
+                rlat = rd.get('lat_ns', {})
+                wlat = wr.get('lat_ns', {})
+                rn = int(rlat.get('N', 0) or 0)
+                wn = int(wlat.get('N', 0) or 0)
+                if rn > 0:
+                    read_lat_sum_ns += float(rlat.get('mean', 0) or 0) * rn
+                    read_lat_n += rn
+                if wn > 0:
+                    write_lat_sum_ns += float(wlat.get('mean', 0) or 0) * wn
+                    write_lat_n += wn
+            result.read_iops = read_iops_total
+            result.write_iops = write_iops_total
+            result.read_mbps = read_bw_total / 1024.0
+            result.write_mbps = write_bw_total / 1024.0
+            result.read_latency_us = (read_lat_sum_ns / read_lat_n / 1000.0) if read_lat_n > 0 else 0.0
+            result.write_latency_us = (write_lat_sum_ns / write_lat_n / 1000.0) if write_lat_n > 0 else 0.0
             result.throughput_mbps = result.read_mbps + result.write_mbps
-            
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             self.logger.warning(f"解析FIO JSON输出时出错: {str(e)}")
     
@@ -412,6 +425,10 @@ class FIOTestRunner:
             return "随机写"
         elif test_type == "randrw":
             return f"随机读写({rwmix_read}%读)"
+        elif test_type == "read":
+            return "顺序读"
+        elif test_type == "write":
+            return "顺序写"
         else:
             return test_type
     
@@ -452,7 +469,7 @@ class FIOTestRunner:
             self.logger.warning(f"清理FIO测试文件时出错: {str(e)}")
     
     def generate_detailed_report(self, results: List[TestResult], output_file: str = "fio_detailed_report.md"):
-        """生成详细的FIO测试报告，包含所有420个测试场景"""
+        """生成详细的FIO测试报告，包含本次执行的所有测试场景"""
         try:
             with open(output_file, 'w', encoding='utf-8') as f:
                 self._write_report_header(f)
@@ -469,7 +486,7 @@ class FIOTestRunner:
         from datetime import datetime
         f.write("# FIO存储性能测试详细报告\n\n")
         f.write(f"**生成时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-        f.write("本报告包含了所有490个FIO测试场景的详细结果。\n\n")
+        f.write("本报告包含本次执行的FIO测试场景的详细结果。\n\n")
     
     def _write_test_matrix_summary(self, f):
         """写入测试矩阵摘要"""
@@ -511,14 +528,19 @@ class FIOTestRunner:
             
             for idx, result in enumerate(sorted_results, 1):
                 status = "✅成功" if not result.error_message else "❌失败"
-                read_mode = self._get_test_name("randread" if result.rwmix_read == 100 else 
-                                               "randwrite" if result.rwmix_read == 0 else "randrw", 
-                                               result.rwmix_read)
-                
+                read_mode = self._get_test_name(result.test_type, result.rwmix_read)
+                show_read = result.test_type not in ("randwrite", "write")
+                show_write = result.test_type not in ("randread", "read")
+                riops = f"{result.read_iops:.0f}" if show_read else "—"
+                wiops = f"{result.write_iops:.0f}" if show_write else "—"
+                rmbps = f"{result.read_mbps:.2f}" if show_read else "—"
+                wmbps = f"{result.write_mbps:.2f}" if show_write else "—"
+                rlat = f"{result.read_latency_us:.2f}" if show_read else "—"
+                wlat = f"{result.write_latency_us:.2f}" if show_write else "—"
                 f.write(f"| {idx} | {result.queue_depth} | {result.numjobs} | {read_mode} | "
-                       f"{result.read_iops:.0f} | {result.write_iops:.0f} | "
-                       f"{result.read_mbps:.2f} | {result.write_mbps:.2f} | "
-                       f"{result.read_latency_us:.2f} | {result.write_latency_us:.2f} | {status} |\n")
+                       f"{riops} | {wiops} | "
+                       f"{rmbps} | {wmbps} | "
+                       f"{rlat} | {wlat} | {status} |\n")
             
             f.write("\n")
     

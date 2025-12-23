@@ -10,14 +10,16 @@ import subprocess
 import time
 from typing import List
 
-from common import TestResult, Logger, clear_system_cache
+from models.result import TestResult
+from utils.logger import Logger
+from utils.file_utils import clear_system_cache
 from core_scenarios_loader import load_core_scenarios
 
 
 class DDTestRunner:
     """DD测试执行器"""
     
-    def __init__(self, test_dir: str, logger: Logger, core_file: str = "config/core_scenarios.yaml"):
+    def __init__(self, test_dir: str, logger: Logger, core_file: str = "config/core_scenarios.json"):
         self.test_dir = test_dir
         self.logger = logger
         try:
